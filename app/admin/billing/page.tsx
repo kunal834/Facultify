@@ -40,8 +40,8 @@ import {
 } from "@/components/ui/table";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
-import { getInvoices } from "@/lib/mock-service";
-import { SUBSCRIPTION_PLANS, TEACHERS, STUDENTS } from "@/lib/mock-data";
+import { getInvoices, getAdminAnalytics } from "@/lib/supabase-service";
+import { SUBSCRIPTION_PLANS } from "@/lib/mock-data";
 import { formatDate, formatCurrency, cn } from "@/lib/utils";
 import type { Invoice, SubscriptionPlan } from "@/lib/types";
 
@@ -203,7 +203,7 @@ export default function BillingPage() {
   const { activeSession } = useAppStore();
 
   const institutionId =
-    activeSession?.role === "admin" ? activeSession.user.id : "inst_01";
+    activeSession?.role === "admin" ? activeSession.user.id : "";
   const currentPlanTier =
     activeSession?.role === "admin"
       ? activeSession.user.subscriptionTier
@@ -215,16 +215,19 @@ export default function BillingPage() {
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-
-  const teacherCount = TEACHERS.filter(
-    (t) => t.institutionId === institutionId
-  ).length;
-  const studentCount = STUDENTS.filter(
-    (s) => s.institutionId === institutionId
-  ).length;
+  const [teacherCount, setTeacherCount] = useState(0);
+  const [studentCount, setStudentCount] = useState(0);
 
   useEffect(() => {
-    getInvoices(institutionId).then(setInvoices);
+    if (!institutionId) return;
+    Promise.all([
+      getInvoices(institutionId),
+      getAdminAnalytics(institutionId),
+    ]).then(([inv, analytics]) => {
+      setInvoices(inv);
+      setTeacherCount(analytics.activeTeachers);
+      setStudentCount(analytics.totalStudents);
+    });
   }, [institutionId]);
 
   const plan = SUBSCRIPTION_PLANS.find((p) => p.tier === currentPlanTier);

@@ -29,7 +29,7 @@ import PageHeader from "@/components/dashboards/PageHeader";
 import EmptyState from "@/components/dashboards/EmptyState";
 import ScoreBadge from "@/components/testing/ScoreBadge";
 import { useAppStore } from "@/store/app-store";
-import { getStudentTests, getStudentSubmissions } from "@/lib/mock-service";
+import { getStudentTests, getStudentSubmissions } from "@/lib/supabase-service";
 import { formatDate, formatDateTime, cn } from "@/lib/utils";
 import type { MockTest, Submission } from "@/lib/types";
 
@@ -193,7 +193,7 @@ export default function StudentTestsPage() {
   const student = activeSession?.role === "student" ? activeSession.user : null;
   const teacherName =
     activeSession?.role === "student" ? activeSession.teacher?.name : undefined;
-  const studentId = student?.id ?? "student_01";
+  const studentId = student?.id ?? "";
 
   const [tests, setTests] = useState<MockTest[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -357,7 +357,6 @@ export default function StudentTestsPage() {
                                 <ScoreBadge
                                   score={s.totalScore}
                                   maxScore={s.maxScore}
-                                  showFraction={false}
                                 />
                               ) : (
                                 submissionStatusBadge(s.status)
@@ -487,7 +486,6 @@ export default function StudentTestsPage() {
                                       <ScoreBadge
                                         score={s.totalScore}
                                         maxScore={s.maxScore}
-                                        showFraction={false}
                                       />
                                     ) : (
                                       submissionStatusBadge(s.status)

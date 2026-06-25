@@ -26,8 +26,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatsCard from "@/components/dashboards/StatsCard";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
-import { getAdminAnalytics } from "@/lib/mock-service";
-import { TEACHER_ANALYTICS } from "@/lib/mock-data";
+import { getAdminAnalytics } from "@/lib/supabase-service";
+import { createBrowserClient } from "@supabase/ssr";
+
+const createClient = () =>
+  createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
 import { cn } from "@/lib/utils";
 import type { AdminAnalytics } from "@/lib/types";
 
@@ -133,33 +140,48 @@ function ChartTooltip({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+interface ChartEntry { testTitle: string; avgScore: number; date: string }
+
 export default function AdminDashboard() {
   const { activeSession } = useAppStore();
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
+  const [chartData, setChartData] = useState<ChartEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const institutionId =
-    activeSession?.role === "admin" ? activeSession.user.id : "inst_01";
-  const institutionName =
-    activeSession?.role === "admin"
-      ? activeSession.user.name
-      : "Your Institution";
+  const institutionId = activeSession?.role === "admin" ? activeSession.user.id : "";
+  const institutionName = activeSession?.role === "admin" ? activeSession.user.name : "Your Institution";
 
   useEffect(() => {
+    if (!institutionId) return;
     let cancelled = false;
     setLoading(true);
-    getAdminAnalytics(institutionId).then((data) => {
-      if (!cancelled) {
-        setAnalytics(data);
-        setLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [institutionId]);
 
-  const chartData = TEACHER_ANALYTICS.recentTestScores;
+    const supabase = createClient();
+
+    Promise.all([
+      getAdminAnalytics(institutionId),
+      supabase
+        .from("tests")
+        .select("title, avg_score, created_at")
+        .eq("institution_id", institutionId)
+        .neq("status", "draft")
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]).then(([a, { data: tests }]) => {
+      if (cancelled) return;
+      setAnalytics(a);
+      setChartData(
+        (tests ?? []).map((t) => ({
+          testTitle: t.title,
+          avgScore:  Math.round(Number(t.avg_score) || 0),
+          date:      new Date(t.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+        }))
+      );
+      setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [institutionId]);
 
   return (
     <div className="animate-fade-in">

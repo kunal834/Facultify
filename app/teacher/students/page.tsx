@@ -69,7 +69,7 @@ import {
   addStudent,
   removeStudent,
   createBatch,
-} from "@/lib/mock-service";
+} from "@/lib/supabase-service";
 import { getInitials, cn } from "@/lib/utils";
 import type { Student, Batch } from "@/lib/types";
 
@@ -252,8 +252,8 @@ function BatchCard({
 export default function TeacherStudentsPage() {
   const { activeSession } = useAppStore();
   const teacher = activeSession?.role === "teacher" ? activeSession.user : null;
-  const teacherId = teacher?.id ?? "teacher_01";
-  const institutionId = teacher?.institutionId ?? "inst_01";
+  const teacherId = teacher?.id ?? "";
+  const institutionId = teacher?.institutionId ?? "";
 
   const [students, setStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);

@@ -30,7 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
-import { getStudentAnalytics } from "@/lib/mock-service";
+import { getStudentAnalytics } from "@/lib/supabase-service";
 import { formatDate, cn, scoreColor } from "@/lib/utils";
 import type { StudentAnalytics } from "@/lib/types";
 
@@ -363,7 +363,7 @@ function SortButton({
 export default function StudentAnalyticsPage() {
   const { activeSession } = useAppStore();
   const student = activeSession?.role === "student" ? activeSession.user : null;
-  const studentId = student?.id ?? "student_01";
+  const studentId = student?.id ?? "";
   const firstName = student?.name?.split(" ")[0] ?? "Student";
 
   const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);

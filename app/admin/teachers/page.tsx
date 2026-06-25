@@ -60,7 +60,7 @@ import {
   inviteTeacher,
   removeTeacher,
   toggleTeacherStatus,
-} from "@/lib/mock-service";
+} from "@/lib/supabase-service";
 import { getInitials, formatDate } from "@/lib/utils";
 import type { Teacher } from "@/lib/types";
 
@@ -128,7 +128,7 @@ export default function TeachersPage() {
   const { activeSession } = useAppStore();
 
   const institutionId =
-    activeSession?.role === "admin" ? activeSession.user.id : "inst_01";
+    activeSession?.role === "admin" ? activeSession.user.id : "";
   const maxTeachers =
     activeSession?.role === "admin" ? activeSession.user.maxTeachers : 25;
 
@@ -180,8 +180,25 @@ export default function TeachersPage() {
         email: form.email.trim(),
         subject: form.subject.trim(),
       });
+
+      // Send the invite email via the server-side route (uses service role key)
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email:         created.email,
+          name:          created.name,
+          institutionId,
+        }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "Unknown error" }));
+        toast.warning(`Teacher added but invite email failed: ${error}`);
+      } else {
+        toast.success(`Invite email sent to ${created.email}.`);
+      }
+
       setTeachers((prev) => [...prev, created]);
-      toast.success(`Invite sent to ${created.name}.`);
       setInviteOpen(false);
       setForm({ name: "", email: "", subject: "" });
     } catch {

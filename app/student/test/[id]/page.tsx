@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAppStore } from "@/store/app-store";
-import { getTest, startTest, submitTest } from "@/lib/mock-service";
+import { getTest, startTest, submitTest } from "@/lib/supabase-service";
 import { cn } from "@/lib/utils";
 import type { MockTest, Question, SubmissionAnswer, Submission } from "@/lib/types";
 
@@ -151,7 +151,7 @@ export default function ActiveTestPage() {
 
   // Resolve studentId from store; fall back to mock default
   const student = activeSession?.role === "student" ? activeSession.user : null;
-  const studentId = student?.id ?? "student_01";
+  const studentId = student?.id ?? "";
 
   // ── Core data state ─────────────────────────────────────────────────────────
   const [test, setTest] = useState<MockTest | null>(null);

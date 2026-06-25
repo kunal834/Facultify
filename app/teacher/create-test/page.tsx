@@ -39,7 +39,7 @@ import {
   addQuestionToTest,
   publishTest,
   getBatches,
-} from "@/lib/mock-service";
+} from "@/lib/supabase-service";
 import type {
   MockTest,
   Question,
@@ -297,8 +297,8 @@ export default function CreateTestPage() {
   const router = useRouter();
   const { activeSession } = useAppStore();
   const teacher = activeSession?.role === "teacher" ? activeSession.user : null;
-  const teacherId = teacher?.id ?? "teacher_01";
-  const institutionId = teacher?.institutionId ?? "inst_01";
+  const teacherId = teacher?.id ?? "";
+  const institutionId = teacher?.institutionId ?? "";
 
   const [step, setStep] = useState(1);
   const [batches, setBatches] = useState<Batch[]>([]);

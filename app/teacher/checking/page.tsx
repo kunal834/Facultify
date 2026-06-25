@@ -29,7 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
-import { getTests, getSubmissions, gradeTextAnswer } from "@/lib/mock-service";
+import { getTests, getSubmissions, gradeTextAnswer } from "@/lib/supabase-service";
 import { cn } from "@/lib/utils";
 import type {
   MockTest,
@@ -573,7 +573,7 @@ function GradingPanel({
 export default function CheckingCenterPage() {
   const { activeSession } = useAppStore();
   const teacherId =
-    activeSession?.role === "teacher" ? activeSession.user.id : "teacher_01";
+    activeSession?.role === "teacher" ? activeSession.user.id : "";
 
   const [tests, setTests] = useState<MockTest[]>([]);
   const [loadingTests, setLoadingTests] = useState(true);

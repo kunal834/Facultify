@@ -99,14 +99,14 @@ export default function MarketingNav() {
             asChild
             className="border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium"
           >
-            <Link href="/login">Log In</Link>
+            <Link href="/auth/login">Log In</Link>
           </Button>
           <Button
             size="sm"
             asChild
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm"
           >
-            <Link href="/onboard">Get Started</Link>
+            <Link href="/auth/signup">Get Started</Link>
           </Button>
         </div>
 
@@ -170,14 +170,14 @@ export default function MarketingNav() {
                   className="w-full border-slate-300 text-slate-700 font-medium"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <Link href="/login">Log In</Link>
+                  <Link href="/auth/login">Log In</Link>
                 </Button>
                 <Button
                   asChild
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <Link href="/onboard">Get Started</Link>
+                  <Link href="/auth/signup">Get Started</Link>
                 </Button>
               </div>
             </SheetContent>

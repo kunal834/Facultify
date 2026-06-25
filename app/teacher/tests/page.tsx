@@ -46,8 +46,7 @@ import {
 import PageHeader from "@/components/dashboards/PageHeader";
 import EmptyState from "@/components/dashboards/EmptyState";
 import { useAppStore } from "@/store/app-store";
-import { getTests, publishTest, deleteTest } from "@/lib/mock-service";
-import { getBatches } from "@/lib/mock-service";
+import { getTests, publishTest, deleteTest, getBatches } from "@/lib/supabase-service";
 import { formatDate, cn } from "@/lib/utils";
 import type { MockTest, TestStatus } from "@/lib/types";
 import type { Batch } from "@/lib/types";
@@ -131,7 +130,7 @@ function TableSkeleton() {
 export default function TeacherTestsPage() {
   const { activeSession } = useAppStore();
   const teacherId =
-    activeSession?.role === "teacher" ? activeSession.user.id : "teacher_01";
+    activeSession?.role === "teacher" ? activeSession.user.id : "";
 
   const [tests, setTests] = useState<MockTest[]>([]);
   const [batchMap, setBatchMap] = useState<Record<string, Batch>>({});

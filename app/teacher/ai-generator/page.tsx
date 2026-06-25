@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/store/app-store";
-import { generateAITest, getBatches, publishTest } from "@/lib/mock-service";
+import { generateAITest, getBatches, publishTest } from "@/lib/supabase-service";
 import type { AIGeneratorConfig, MockTest, QuestionType, DifficultyLevel, Batch } from "@/lib/types";
 
 type GenState = "idle" | "generating" | "done";
@@ -45,8 +45,8 @@ export default function AIGeneratorPage() {
   const router = useRouter();
   const { activeSession } = useAppStore();
   const teacher = activeSession?.role === "teacher" ? activeSession.user : null;
-  const teacherId = teacher?.id ?? "teacher_01";
-  const institutionId = teacher?.institutionId ?? "inst_01";
+  const teacherId = teacher?.id ?? "";
+  const institutionId = teacher?.institutionId ?? "";
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [genState, setGenState] = useState<GenState>("idle");

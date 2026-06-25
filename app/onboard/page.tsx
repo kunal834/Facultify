@@ -26,7 +26,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SUBSCRIPTION_PLANS } from "@/lib/mock-data";
-import { onboardInstitution } from "@/lib/mock-service";
+import { onboardInstitution } from "@/lib/supabase-service";
+import { useAppStore } from "@/store/app-store";
 import type { OnboardFormData, SubscriptionTier } from "@/lib/types";
 
 // ─── Step metadata ────────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ const DEFAULT_FORM: OnboardFormData = {
 
 export default function OnboardPage() {
   const router = useRouter();
+  const { initSession } = useAppStore();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<OnboardFormData>(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
@@ -70,6 +72,8 @@ export default function OnboardPage() {
     setLoading(true);
     try {
       await onboardInstitution(form);
+      // Populate the store from the newly created profile
+      await initSession();
       toast.success(
         `${form.institutionName} has been onboarded successfully! Welcome aboard.`
       );

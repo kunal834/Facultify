@@ -37,7 +37,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import StatsCard from "@/components/dashboards/StatsCard";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
-import { getTeacherAnalytics, getTests, getBatches } from "@/lib/mock-service";
+import { getTeacherAnalytics, getTests, getBatches } from "@/lib/supabase-service";
 import { cn } from "@/lib/utils";
 import type { Batch, MockTest, TeacherAnalytics } from "@/lib/types";
 
@@ -131,16 +131,16 @@ export default function TeacherDashboard() {
   const { activeSession } = useAppStore();
   const teacher =
     activeSession?.role === "teacher" ? activeSession.user : null;
-  const teacherId = teacher?.id ?? "teacher_01";
+  const teacherId = teacher?.id ?? "";
 
   const [analytics, setAnalytics] = useState<TeacherAnalytics | null>(null);
   const [tests, setTests]         = useState<MockTest[]>([]);
   const [batches, setBatches]     = useState<Batch[]>([]);
   const [loading, setLoading]     = useState(true);
 
-  // Prevent state updates if the component unmounts mid-fetch
   const alive = useRef(true);
   useEffect(() => {
+    if (!teacherId) return;
     alive.current = true;
     setLoading(true);
 
@@ -249,7 +249,7 @@ export default function TeacherDashboard() {
               value={`${analytics?.avgClassScore ?? 0}%`}
               subtitle="across all tests"
               icon={TrendingUp}
-              color="teal"
+              color="green"
               trend={{ value: 5, label: "vs last test" }}
             />
           </>

@@ -319,7 +319,7 @@ export default function Hero() {
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4">
               <Link
-                href="/onboard"
+                href="/auth/signup"
                 className="inline-flex items-center gap-2.5 rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 style={{
                   background: "linear-gradient(135deg, #3B6FFF 0%, #5B4DFF 100%)",

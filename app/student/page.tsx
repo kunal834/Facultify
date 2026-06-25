@@ -30,7 +30,7 @@ import {
   getStudentAnalytics,
   getStudentTests,
   getStudentSubmissions,
-} from "@/lib/mock-service";
+} from "@/lib/supabase-service";
 import { formatDate, cn } from "@/lib/utils";
 import type { StudentAnalytics, MockTest, Submission } from "@/lib/types";
 
@@ -204,7 +204,7 @@ function ResultRow({ sub, testTitle }: { sub: Submission; testTitle?: string }) 
 export default function StudentDashboard() {
   const { activeSession } = useAppStore();
   const student = activeSession?.role === "student" ? activeSession.user : null;
-  const studentId = student?.id ?? "student_01";
+  const studentId = student?.id ?? "";
   const firstName = student?.name?.split(" ")[0] ?? "Student";
 
   const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
@@ -214,6 +214,7 @@ export default function StudentDashboard() {
 
   const alive = useRef(true);
   useEffect(() => {
+    if (!studentId) return;
     alive.current = true;
     setLoading(true);
 
@@ -319,7 +320,7 @@ export default function StudentDashboard() {
                   : "—"
               }
               icon={CheckCircle2}
-              color="teal"
+              color="green"
             />
           </>
         )}

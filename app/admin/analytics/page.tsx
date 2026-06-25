@@ -21,13 +21,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import PageHeader from "@/components/dashboards/PageHeader";
 import StatsCard from "@/components/dashboards/StatsCard";
 import { useAppStore } from "@/store/app-store";
-import { getAdminAnalytics, getTeacherAnalytics } from "@/lib/mock-service";
-import { TEACHERS, STUDENTS, TEACHER_ANALYTICS } from "@/lib/mock-data";
+import { getAdminAnalytics, getTeachers } from "@/lib/supabase-service";
+import { createBrowserClient } from "@supabase/ssr";
 import { Users, GraduationCap, FileText, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AdminAnalytics, TeacherAnalytics } from "@/lib/types";
-
-// ─── Static chart data ────────────────────────────────────────────────────────
+import type { AdminAnalytics, Teacher } from "@/lib/types";
 
 const MONTHLY_DATA = [
   { month: "Jan", tests: 12, submissions: 180 },
@@ -45,13 +43,7 @@ const SUBJECT_PIE = [
   { name: "English",     value: 25, color: "#f59e0b" },
 ];
 
-// Deterministic per-teacher avg scores keyed by teacher id — no Math.random()
-const TEACHER_SCORES: Record<string, number> = {
-  teacher_01: 79,
-  teacher_02: 74,
-  teacher_03: 68,
-  teacher_04: 83,
-};
+interface TopStudent { id: string; name: string; email: string; roll_number: string }
 
 // ─── Skeleton helpers ─────────────────────────────────────────────────────────
 
@@ -210,53 +202,54 @@ function RankBadge({ rank }: { rank: number }) {
 export default function AdminAnalyticsPage() {
   const { activeSession } = useAppStore();
   const institutionId =
-    activeSession?.role === "admin" ? activeSession.user.id : "inst_01";
+    activeSession?.role === "admin" ? activeSession.user.id : "";
 
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
-  const [teacherAnalytics, setTeacherAnalytics] = useState<TeacherAnalytics | null>(null);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!institutionId) return;
     let cancelled = false;
     setLoading(true);
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     Promise.all([
       getAdminAnalytics(institutionId),
-      getTeacherAnalytics("teacher_01"),
-    ]).then(([adminData, teacherData]) => {
+      getTeachers(institutionId),
+      supabase
+        .from("students")
+        .select("id, name, email, roll_number")
+        .eq("institution_id", institutionId)
+        .eq("is_active", true)
+        .limit(5),
+    ]).then(([adminData, teacherData, { data: studentsData }]) => {
       if (!cancelled) {
         setAnalytics(adminData);
-        setTeacherAnalytics(teacherData);
+        setTeachers(teacherData);
+        setTopStudents((studentsData ?? []) as TopStudent[]);
         setLoading(false);
       }
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [institutionId]);
 
-  // Deterministic teacher performance — no Math.random()
   const teacherPerformance = useMemo(
     () =>
-      TEACHERS.map((t) => ({
-        name: t.name.split(" ").slice(-1)[0], // last name only — fits chart axis
+      teachers.map((t) => ({
+        name: t.name.split(" ").slice(-1)[0],
         fullName: t.name,
         subject: t.subject,
-        avgScore: TEACHER_SCORES[t.id] ?? 75,
+        tests: t.testCount,
         students: t.studentCount,
       })),
-    []
+    [teachers]
   );
-
-  const topStudents = useMemo(
-    () =>
-      [...STUDENTS]
-        .sort((a, b) => b.overallScore - a.overallScore)
-        .slice(0, 5),
-    []
-  );
-
-  // Chart data from TEACHER_ANALYTICS (as required)
-  const recentScores = TEACHER_ANALYTICS.recentTestScores;
 
   return (
     <div className="animate-fade-in">
@@ -370,13 +363,13 @@ export default function AdminAnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Teacher Performance — BarChart */}
+        {/* Teacher Activity — BarChart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-slate-800">
-              Teacher Performance
+              Teacher Activity
             </CardTitle>
-            <CardDescription>Average class score by teacher</CardDescription>
+            <CardDescription>Tests created per teacher</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -399,27 +392,15 @@ export default function AdminAnalyticsPage() {
                     axisLine={false}
                   />
                   <YAxis
-                    domain={[0, 100]}
                     tick={{ fontSize: 11, fill: "#64748b" }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v: number) => `${v}%`}
+                    allowDecimals={false}
                   />
                   <Tooltip content={<BarTooltip />} cursor={{ fill: "#f8fafc" }} />
-                  <Bar dataKey="avgScore" radius={[4, 4, 0, 0]} maxBarSize={52}>
+                  <Bar dataKey="tests" radius={[4, 4, 0, 0]} maxBarSize={52}>
                     {teacherPerformance.map((entry) => (
-                      <Cell
-                        key={entry.fullName}
-                        fill={
-                          entry.avgScore >= 80
-                            ? "#7c3aed"
-                            : entry.avgScore >= 70
-                            ? "#8b5cf6"
-                            : entry.avgScore >= 60
-                            ? "#a78bfa"
-                            : "#c4b5fd"
-                        }
-                      />
+                      <Cell key={entry.fullName} fill="#7c3aed" />
                     ))}
                   </Bar>
                 </BarChart>
@@ -507,12 +488,16 @@ export default function AdminAnalyticsPage() {
                     <TableHead className="w-10">#</TableHead>
                     <TableHead>Student</TableHead>
                     <TableHead className="hidden sm:table-cell">Roll No.</TableHead>
-                    <TableHead className="hidden md:table-cell text-right">Tests</TableHead>
-                    <TableHead className="min-w-[140px]">Overall Score</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {topStudents.map((s, i) => (
+                  {topStudents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
+                        No students enrolled yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : topStudents.map((s, i) => (
                     <TableRow key={s.id} className="hover:bg-slate-50/60">
                       <TableCell className="py-3">
                         <RankBadge rank={i + 1} />
@@ -528,13 +513,7 @@ export default function AdminAnalyticsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-slate-500 py-3">
-                        {s.rollNumber}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-right text-sm text-muted-foreground py-3">
-                        {s.testsAttempted}
-                      </TableCell>
-                      <TableCell className="py-3 pr-6">
-                        <ScoreBar score={s.overallScore} />
+                        {s.roll_number}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -545,66 +524,6 @@ export default function AdminAnalyticsPage() {
         </Card>
       </div>
 
-      {/* ── Recent test scores from TEACHER_ANALYTICS ── */}
-      <div className="mt-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-800">
-              Recent Test Scores — Mathematics
-            </CardTitle>
-            <CardDescription>
-              Last {recentScores.length} tests by Dr. Ananya Sharma · avg class score per test
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <ChartSkeleton height={180} />
-            ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart
-                  data={recentScores}
-                  margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis
-                    dataKey="testTitle"
-                    tick={{ fontSize: 10, fill: "#64748b" }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval={0}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: number) => `${v}%`}
-                  />
-                  <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                    formatter={(v: number) => [`${v}%`, "Avg Score"]}
-                    cursor={{ fill: "#f8fafc" }}
-                  />
-                  <Bar dataKey="avgScore" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={56}>
-                    {recentScores.map((entry) => (
-                      <Cell
-                        key={entry.testTitle}
-                        fill={
-                          entry.avgScore >= 80
-                            ? "#2563eb"
-                            : entry.avgScore >= 70
-                            ? "#3b82f6"
-                            : "#60a5fa"
-                        }
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
