@@ -738,7 +738,7 @@ export async function submitTest(
   const { data: sub, error: subErr } = await supabase
     .from('submissions')
     .select(`
-      id, test_id, max_score,
+      id, test_id, status, max_score,
       tests!inner(
         total_marks,
         questions(id, type, marks, question_options(id, is_correct))
@@ -748,6 +748,11 @@ export async function submitTest(
     .single()
 
   if (subErr || !sub) throw new Error('Submission not found')
+
+  const subStatus = (sub as { status: string }).status
+  if (subStatus === 'submitted' || subStatus === 'graded') {
+    throw new Error('This test has already been submitted.')
+  }
 
   const testsArr = (sub as unknown as { tests: Array<{ questions: Record<string, unknown>[] }> }).tests
   const questions = testsArr[0]?.questions ?? []

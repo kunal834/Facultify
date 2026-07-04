@@ -45,7 +45,11 @@ export async function POST(request: NextRequest) {
   }
 
   const adminClient = createAdminClient();
-  const origin = request.headers.get("origin") ?? process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  // Use the app's own origin — never fall back to the Supabase project URL
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    request.headers.get("origin") ??
+    `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
   // Generate an invite magic link (does NOT send Supabase's default email)
   const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({

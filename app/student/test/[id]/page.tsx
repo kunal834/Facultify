@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Flag,
@@ -11,6 +12,8 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
+  XCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +29,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import ScoreBadge from "@/components/testing/ScoreBadge";
 import { useAppStore } from "@/store/app-store";
-import { getTest, startTest, submitTest } from "@/lib/supabase-service";
-import { cn } from "@/lib/utils";
+import {
+  getTest,
+  startTest,
+  submitTest,
+  getSubmission,
+  isResultVisible,
+} from "@/lib/supabase-service";
+import { cn, formatDateTime } from "@/lib/utils";
 import type { MockTest, Question, SubmissionAnswer, Submission } from "@/lib/types";
 
 // ─── Time formatting ──────────────────────────────────────────────────────────
@@ -142,11 +152,66 @@ function TrueFalseButton({
   );
 }
 
+// ─── Review mode: read-only option row (shows correct answer + student's pick) ─
+
+function ReviewOptionRow({
+  label,
+  isCorrectOption,
+  isSelected,
+}: {
+  label: string;
+  isCorrectOption: boolean;
+  isSelected: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-4 px-5 py-4 rounded-xl border-2",
+        isCorrectOption
+          ? "border-emerald-400 bg-emerald-50"
+          : isSelected
+          ? "border-red-400 bg-red-50"
+          : "border-slate-200 bg-white"
+      )}
+    >
+      {isCorrectOption ? (
+        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+      ) : isSelected ? (
+        <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+      ) : (
+        <span className="h-5 w-5 shrink-0 rounded-full border-2 border-slate-300" />
+      )}
+      <span className="text-base leading-snug text-slate-700">{label}</span>
+      {isSelected && (
+        <span className="ml-auto text-xs font-medium text-slate-400 shrink-0">
+          Your answer
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ActiveTestPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 bg-slate-50 flex items-center justify-center z-50">
+          <div className="h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <ActiveTestPageInner />
+    </Suspense>
+  );
+}
+
+function ActiveTestPageInner() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reviewId = searchParams.get("review");
   const { activeSession } = useAppStore();
 
   // Resolve studentId from store; fall back to mock default
@@ -172,32 +237,61 @@ export default function ActiveTestPage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(Date.now());
 
-  // ── Load test + start submission ─────────────────────────────────────────────
+  // ── Load test + submission ────────────────────────────────────────────────────
   useEffect(() => {
     if (!params.id) return;
-    Promise.all([getTest(params.id), startTest(params.id, studentId)]).then(
-      ([t, sub]) => {
-        setTest(t ?? null);
-        setActiveSubmission(sub);
+    let cancelled = false;
 
-        // Hydrate any already-saved answers (resume case)
-        if (sub?.answers?.length) {
-          const restored: Record<string, SubmissionAnswer> = {};
-          sub.answers.forEach((a) => {
-            restored[a.questionId] = a;
-          });
-          setAnswers(restored);
-        }
+    async function load() {
+      const t = await getTest(params.id as string);
+      if (cancelled) return;
+      setTest(t ?? null);
 
-        // Initialise timer
-        if (t) {
-          setTimeLeft(t.durationMinutes * 60);
-        }
-
+      // Explicit review link (from the "View Results" button) — read-only, no timer.
+      if (reviewId) {
+        const sub = await getSubmission(reviewId);
+        if (cancelled) return;
+        setActiveSubmission(sub ?? null);
         setLoading(false);
+        return;
       }
-    );
-  }, [params.id, studentId]);
+
+      const sub = await startTest(params.id as string, studentId);
+      if (cancelled) return;
+      setActiveSubmission(sub);
+
+      // Already finished — never re-enter the live exam UI, even without ?review=.
+      if (sub.status === "submitted" || sub.status === "graded") {
+        setLoading(false);
+        return;
+      }
+
+      // Hydrate any already-saved answers (resume in-progress attempt)
+      if (sub.answers?.length) {
+        const restored: Record<string, SubmissionAnswer> = {};
+        sub.answers.forEach((a) => {
+          restored[a.questionId] = a;
+        });
+        setAnswers(restored);
+      }
+
+      if (t) {
+        setTimeLeft(t.durationMinutes * 60);
+      }
+
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, studentId, reviewId]);
+
+  const isReviewMode =
+    !!activeSubmission &&
+    (activeSubmission.status === "submitted" ||
+      activeSubmission.status === "graded");
 
   // ── Countdown tick ───────────────────────────────────────────────────────────
   const handleAutoSubmit = useCallback(() => {
@@ -222,7 +316,7 @@ export default function ActiveTestPage() {
   }, [activeSubmission, answers, router]);
 
   useEffect(() => {
-    if (loading || !test) return;
+    if (loading || !test || isReviewMode) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -238,7 +332,7 @@ export default function ActiveTestPage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [loading, test, handleAutoSubmit]);
+  }, [loading, test, isReviewMode, handleAutoSubmit]);
 
   // ── Answer handlers ───────────────────────────────────────────────────────────
   const handleSelectOption = useCallback(
@@ -341,6 +435,216 @@ export default function ActiveTestPage() {
         <Button variant="outline" onClick={() => router.push("/student/tests")}>
           Back to Tests
         </Button>
+      </div>
+    );
+  }
+
+  // ── Review link requested but submission couldn't be loaded ───────────────────
+  if (reviewId && !activeSubmission) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center gap-5">
+        <AlertTriangle className="h-12 w-12 text-amber-400" />
+        <div className="text-center">
+          <p className="text-lg font-semibold text-slate-800">
+            Result not found
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            We couldn&apos;t load this submission.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => router.push("/student/tests")}>
+          Back to Tests
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Review mode (already submitted/graded) ────────────────────────────────────
+  if (isReviewMode && activeSubmission) {
+    const resultVisible = isResultVisible(test, activeSubmission);
+
+    if (!resultVisible) {
+      return (
+        <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center gap-5">
+          <Clock className="h-12 w-12 text-blue-400" />
+          <div className="text-center max-w-sm">
+            <p className="text-lg font-semibold text-slate-800">
+              Results not declared yet
+            </p>
+            <p className="text-sm text-slate-500 mt-1">
+              Your teacher hasn&apos;t released the results for{" "}
+              <strong>{test.title}</strong> yet. Check back soon.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => router.push("/student/tests")}>
+            Back to Tests
+          </Button>
+        </div>
+      );
+    }
+
+    const answersByQuestion = new Map(
+      activeSubmission.answers.map((a) => [a.questionId, a])
+    );
+
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
+        <header className="bg-white border-b border-slate-200 px-5 py-4 shadow-sm sticky top-0 z-20">
+          <div className="max-w-3xl mx-auto flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => router.push("/student/tests")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-0">
+              <h1 className="font-semibold text-sm leading-tight truncate text-slate-800">
+                {test.title}
+              </h1>
+              <p className="text-xs text-slate-400 truncate">
+                {test.subject} &middot; Test Results
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+          {/* ── Score summary ────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-wrap items-center gap-6">
+            <ScoreBadge
+              score={activeSubmission.totalScore}
+              maxScore={activeSubmission.maxScore}
+            />
+            <div className="flex-1 min-w-[180px] grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide">
+                  Status
+                </p>
+                <p className="font-medium text-slate-700 capitalize">
+                  {activeSubmission.status}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide">
+                  Time Taken
+                </p>
+                <p className="font-medium text-slate-700">
+                  {activeSubmission.timeTakenMinutes
+                    ? `${activeSubmission.timeTakenMinutes} min`
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide">
+                  Submitted
+                </p>
+                <p className="font-medium text-slate-700">
+                  {activeSubmission.submittedAt
+                    ? formatDateTime(activeSubmission.submittedAt)
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide">
+                  Questions
+                </p>
+                <p className="font-medium text-slate-700">
+                  {test.questions.length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Per-question breakdown ───────────────────────────────────── */}
+          {test.questions.map((q, i) => {
+            const answer = answersByQuestion.get(q.id);
+            return (
+              <div
+                key={q.id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8"
+              >
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+                      Question {i + 1} of {test.questions.length}
+                    </span>
+                    <Badge
+                      className={cn(
+                        "text-xs font-medium capitalize rounded-full",
+                        difficultyStyle[q.difficulty]
+                      )}
+                    >
+                      {difficultyLabel[q.difficulty]}
+                    </Badge>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs font-medium rounded-full shrink-0",
+                      (answer?.marksAwarded ?? 0) >= q.marks
+                        ? "text-emerald-700 border-emerald-300 bg-emerald-50"
+                        : (answer?.marksAwarded ?? 0) > 0
+                        ? "text-amber-700 border-amber-300 bg-amber-50"
+                        : "text-red-700 border-red-300 bg-red-50"
+                    )}
+                  >
+                    {answer?.marksAwarded ?? 0} / {q.marks} marks
+                  </Badge>
+                </div>
+
+                <p className="text-lg font-medium leading-relaxed text-slate-800 mb-8">
+                  {q.text}
+                </p>
+
+                {(q.type === "mcq" || q.type === "true_false") &&
+                  q.options && (
+                    <div className={cn(q.type === "true_false" ? "flex gap-4" : "space-y-3")}>
+                      {q.options.map((option) => (
+                        <ReviewOptionRow
+                          key={option.id}
+                          label={option.text}
+                          isCorrectOption={option.isCorrect}
+                          isSelected={answer?.selectedOptionId === option.id}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                {q.type === "text" && (
+                  <div className="space-y-3">
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">
+                        Your answer
+                      </p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                        {answer?.textAnswer?.trim() || "No answer submitted"}
+                      </p>
+                    </div>
+                    {answer?.teacherFeedback && (
+                      <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+                        <p className="text-xs font-medium text-blue-500 uppercase tracking-wide mb-1">
+                          Teacher feedback
+                        </p>
+                        <p className="text-sm text-blue-800">
+                          {answer.teacherFeedback}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="flex justify-center pb-4">
+            <Button variant="outline" asChild>
+              <Link href="/student/tests">Back to Tests</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
