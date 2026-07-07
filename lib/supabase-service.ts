@@ -754,8 +754,8 @@ export async function submitTest(
     throw new Error('This test has already been submitted.')
   }
 
-  const testsArr = (sub as unknown as { tests: Array<{ questions: Record<string, unknown>[] }> }).tests
-  const questions = testsArr[0]?.questions ?? []
+  const testRel = (sub as unknown as { tests: { questions: Record<string, unknown>[] } }).tests
+  const questions = testRel?.questions ?? []
   let autoScore = 0
 
   const gradedAnswers = answers.map(a => {
@@ -1009,12 +1009,12 @@ export async function getStudentAnalytics(studentId: string): Promise<StudentAna
     submitted_at: string
     time_taken_minutes: number
     status: string
-    tests: Array<{ title: string; subject: string; result_delay_minutes: number; results_declared: boolean }>
+    tests: { title: string; subject: string; result_delay_minutes: number; results_declared: boolean }
   }>
 
   // Hide scores that haven't been declared yet — same rule as isResultVisible().
   const rows = allRows.filter(r => {
-    const t = r.tests[0]
+    const t = r.tests
     if (!t) return false
     return isResultVisible(
       { resultsDeclared: t.results_declared, resultDelayMinutes: t.result_delay_minutes },
@@ -1023,7 +1023,7 @@ export async function getStudentAnalytics(studentId: string): Promise<StudentAna
   })
 
   const scoreHistory = rows.map(r => ({
-    testTitle: r.tests[0]?.title ?? '',
+    testTitle: r.tests?.title ?? '',
     score:     r.total_score,
     maxScore:  r.max_score,
     date:      r.submitted_at,
@@ -1032,7 +1032,7 @@ export async function getStudentAnalytics(studentId: string): Promise<StudentAna
   // subject → percentages
   const subjectMap = new Map<string, number[]>()
   rows.forEach(r => {
-    const sub = r.tests[0]?.subject ?? 'Unknown'
+    const sub = r.tests?.subject ?? 'Unknown'
     if (!subjectMap.has(sub)) subjectMap.set(sub, [])
     subjectMap.get(sub)!.push(r.percentage)
   })

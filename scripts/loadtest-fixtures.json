@@ -1,0 +1,126 @@
+{
+  "institutionId": "37817de7-94ea-4601-af67-bb2f00219e5f",
+  "password": "FacultifyLoadTest_2026!",
+  "teacher": {
+    "id": "2e893708-7e9c-46ec-9f5a-4574dac8eb96",
+    "email": "loadtest.teacher@facultify.test"
+  },
+  "batchId": "77df8d39-2d2d-4368-a0d5-2d7fc8966cbc",
+  "students": [
+    {
+      "id": "40efb3c0-4af9-4630-9300-3ba6151b76fc",
+      "email": "loadtest.student001@facultify.test",
+      "userId": "9448b5ba-55db-44f1-b32d-a4f335f126e8"
+    },
+    {
+      "id": "276ab543-7a3a-4e4e-a78b-afc81f85b604",
+      "email": "loadtest.student002@facultify.test",
+      "userId": "a788dc85-d4ef-41e8-b864-c28673c73798"
+    },
+    {
+      "id": "2cc5a04c-ada0-4350-b33e-c4492d141f53",
+      "email": "loadtest.student003@facultify.test",
+      "userId": "62ebd389-6eae-4103-af91-f7f09d552354"
+    },
+    {
+      "id": "587d4a4f-3bdb-49a0-982d-3145a1ab125a",
+      "email": "loadtest.student004@facultify.test",
+      "userId": "abb3f862-5f28-44ee-a5fc-f56390324426"
+    },
+    {
+      "id": "59409c77-930e-4c1c-8705-7c1ce877b057",
+      "email": "loadtest.student005@facultify.test",
+      "userId": "2cf87fb7-872c-4c3d-81da-4293cededf71"
+    },
+    {
+      "id": "d3685d72-11b3-45ca-b008-7c5867583125",
+      "email": "loadtest.student006@facultify.test",
+      "userId": "73489948-342f-4ba6-8a0b-eb4a44e71141"
+    },
+    {
+      "id": "03755fa9-5b2c-4244-ae18-d31c3888668a",
+      "email": "loadtest.student007@facultify.test",
+      "userId": "b1be1b04-b956-4ddd-b942-62a0d64d54a1"
+    },
+    {
+      "id": "ee672023-dd2e-419b-bcd1-123702ab795e",
+      "email": "loadtest.student008@facultify.test",
+      "userId": "36089883-11a6-40dc-8e11-8774b099a787"
+    },
+    {
+      "id": "063a9e21-74ab-4691-b127-6580e11bf501",
+      "email": "loadtest.student009@facultify.test",
+      "userId": "e8258531-7c46-4354-b539-c3f1d599b448"
+    },
+    {
+      "id": "53366412-ff08-4385-a478-38f170fd4527",
+      "email": "loadtest.student010@facultify.test",
+      "userId": "71b2f1e1-ef18-4ff3-ba61-78dda14c4702"
+    },
+    {
+      "id": "30c9da9c-890e-4b74-95aa-e2df9dd90354",
+      "email": "loadtest.student011@facultify.test",
+      "userId": "269e9b1c-4ae3-48fa-a787-57aba72cb6a4"
+    },
+    {
+      "id": "020de1c5-0eb8-4407-a7a8-05c086d11b2c",
+      "email": "loadtest.student012@facultify.test",
+      "userId": "1d6fb229-1b20-4042-aeef-a6adcd10a3cc"
+    },
+    {
+      "id": "e589412b-dedc-4835-a71b-1d9a3b66b59b",
+      "email": "loadtest.student013@facultify.test",
+      "userId": "1498174c-3af0-4033-9008-c32663b87e65"
+    },
+    {
+      "id": "af95ec34-8c68-4a9a-9239-8fb22dc9d3fd",
+      "email": "loadtest.student014@facultify.test",
+      "userId": "c624598f-8fff-47af-bc9c-19c2e47154f2"
+    },
+    {
+      "id": "fb1104c0-4c94-47a5-980a-0051a2383b5a",
+      "email": "loadtest.student015@facultify.test",
+      "userId": "4fd78ae9-30cf-43ad-874a-0dea5ec80b9d"
+    },
+    {
+      "id": "7006d0cc-40e1-466b-a5b9-6045c6ea4d14",
+      "email": "loadtest.student016@facultify.test",
+      "userId": "b1f57bad-c9fb-4381-bede-1ad05981d1b3"
+    },
+    {
+      "id": "63e95c6e-b811-43db-92e1-9fa80b457029",
+      "email": "loadtest.student017@facultify.test",
+      "userId": "f0b93c42-3906-494c-9b65-67234abc9adc"
+    },
+    {
+      "id": "dff01ecb-e189-4f4e-a468-e78240224432",
+      "email": "loadtest.student018@facultify.test",
+      "userId": "078959c6-f68c-4a2e-9a11-7a532257369e"
+    },
+    {
+      "id": "ef237971-324b-4e92-8d2f-e7cef005644e",
+      "email": "loadtest.student019@facultify.test",
+      "userId": "f8df44c2-dd1f-48eb-8709-5a8836227ee5"
+    },
+    {
+      "id": "f7d8692c-2e97-42a2-b97d-cc4ef5c5429b",
+      "email": "loadtest.student020@facultify.test",
+      "userId": "e2968b0f-254b-48a3-8497-bdcba64d1f5e"
+    }
+  ],
+  "tests": [
+    {
+      "id": "0f5fdf98-4aa0-42cb-814a-a9c9982e6951",
+      "title": "Load Test Quiz 1"
+    },
+    {
+      "id": "0d66d7cf-aaa7-4f05-bb2c-952f0a9b8f6a",
+      "title": "Load Test Quiz 2"
+    },
+    {
+      "id": "d8880dd8-0f04-4e9b-b6aa-a57d01b7c1be",
+      "title": "Load Test Quiz 3"
+    }
+  ],
+  "seededAt": "2026-07-06T11:14:51.322Z"
+}
