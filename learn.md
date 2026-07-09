@@ -23,7 +23,8 @@ A plain-language walkthrough of how this project is built, what every technology
 15. [Testing — Load Testing & End-to-End (Playwright)](#15-testing--load-testing--end-to-end-playwright)
 16. [Reviewing a Submitted Test — Answer Review Mode](#16-reviewing-a-submitted-test--answer-review-mode)
 17. [Environment Variables & Invite Link Origin](#17-environment-variables--invite-link-origin)
-18. [Glossary](#18-glossary)
+18. [Production Fixes — Teacher Password Setup & Magic-Link Misrouting](#18-production-fixes--teacher-password-setup--magic-link-misrouting)
+19. [Glossary](#19-glossary)
 
 ---
 
@@ -125,7 +126,8 @@ Facultify/
 │   │   ├── login/page.tsx       ← Email + password login
 │   │   ├── signup/page.tsx      ← New admin account creation
 │   │   ├── callback/route.ts    ← PKCE code → session exchange + profile creation
-│   │   └── confirm/page.tsx     ← Hash-based (#access_token) token handler
+│   │   ├── confirm/page.tsx     ← Hash-based (#access_token) token handler
+│   │   └── set-password/page.tsx ← First-time credential setup (see §18)
 │   ├── invite/
 │   │   └── teacher/[teacherId]/
 │   │       └── page.tsx         ← Invite link landing: handles both PKCE and hash flows
@@ -374,8 +376,8 @@ If a student tries to fetch tests from another batch or another school, the data
 8. That page detects whether the URL has `?code=` (PKCE flow) or `#access_token=` (implicit/hash flow) and handles both:
    - **PKCE (`?code=`)**: navigates to `/auth/callback?code=XXX` so the server can exchange it.
    - **Hash (`#access_token=`)**: calls `supabase.auth.setSession()` in the browser, then POSTs to `/api/auth/finalize`.
-9. `/api/auth/finalize` (server-side) finds the `teachers` row by email, creates the `profiles` row, links `teachers.user_id`, and returns `{ destination: "/teacher" }`.
-10. Teacher is redirected to `/teacher` dashboard.
+9. `/api/auth/finalize` (server-side) finds the `teachers` row by email, creates the `profiles` row, links `teachers.user_id`, and returns `{ destination: "/auth/set-password?next=/teacher" }` for a fresh invite (see [§18](#18-production-fixes--teacher-password-setup--magic-link-misrouting)).
+10. Teacher sets a password on `/auth/set-password`, then is redirected to `/teacher` dashboard. From then on they can log in with either that password or a fresh magic link.
 
 ### How a Student is Invited
 
@@ -936,7 +938,60 @@ A committed, secret-free template (`.env.local.example`) was added at the projec
 
 ---
 
-## 18. Glossary
+## 18. Production Fixes — Teacher Password Setup & Magic-Link Misrouting
+
+Two production bugs, both in the auth flow, fixed together on 2026-07-09.
+
+### 18.1 Teachers Could Never Set a Password
+
+**The bug:** An admin invites a teacher from `/admin/teachers`. The teacher clicks the emailed link, `/invite/teacher/[teacherId]/page.tsx` authenticates them via the magic link, and they land straight on `/teacher`. Nothing in the app ever called `supabase.auth.updateUser({ password })` — there was no password-creation form anywhere. So the "Password" tab on `/auth/login` was permanently unusable for every invited teacher; their only way back in was always requesting a fresh magic link.
+
+**The fix — a dedicated credential step, but only on first invite:**
+
+1. `app/api/invite/route.ts` now appends `?setup=1` to the redirect URL used for the **initial** `generateLink({ type: "invite" })` call (the one that always creates a brand-new, password-less auth user). The **fallback** `magiclink` link — used when the teacher already has an account — deliberately does *not* get `setup=1`, so re-sending an invite to an already-set-up teacher doesn't force them through the password step again.
+2. `app/invite/teacher/[teacherId]/page.tsx` reads `?setup=1` off the URL and threads it through whichever auth flow actually fires:
+   - PKCE (`?code=`) → forwarded as `/auth/callback?code=XXX&setup=1`.
+   - Hash (`#access_token=`) → sent as `{ setup: true }` in the JSON body of the `POST /api/auth/finalize` call.
+3. Both `app/auth/callback/route.ts` and `app/api/auth/finalize/route.ts`, when they resolve the user to a `teacher` row, now return `/auth/set-password?next=/teacher` instead of `/teacher` directly whenever `setup` is true.
+4. `app/auth/set-password/page.tsx` (new) — a simple client page that requires an active session, takes a new password + confirmation, calls `supabase.auth.updateUser({ password })`, and then redirects to whatever `?next=` was passed in. If there's no session (someone hits this URL cold), it bounces to `/auth/login`.
+
+**Why gate it with a query flag instead of always showing the password step:** teachers who already completed setup once shouldn't be forced to reset their password every time an admin re-sends an invite or they log in via magic link from `/auth/login`. The flag is only set on the link that's guaranteed to be a brand-new account.
+
+### 18.2 Students Sent to "Create Institute" Instead of Their Dashboard
+
+**The bug:** an existing student logging in via `/auth/login`'s magic-link tab would sometimes land on `/onboard` — the *admin* institution-creation wizard — instead of `/student`.
+
+**Root cause:** both `app/auth/callback/route.ts` and `app/api/auth/finalize/route.ts` looked up the student by email like this:
+
+```ts
+const { data: student } = await adminDb
+  .from("students")
+  .select("id, institution_id")
+  .ilike("email", email)
+  .maybeSingle();
+```
+
+`.maybeSingle()` only tolerates **zero or one** matching row. The `students` table has no uniqueness constraint on `email` — and by design a student can legitimately have more than one row sharing an email (e.g. enrolled into two different batches, possibly by two different teachers). The lookup also wasn't scoped by `institution_id`, so the same email existing in two institutions hits the same problem.
+
+Whenever two or more rows matched, PostgREST returned an *error* instead of data (`PGRST116`, "multiple rows returned"). The code destructured only `data` and never checked that error, so `student` silently became `undefined` — indistinguishable from "this person doesn't exist yet." Execution fell through the teacher check, the student check, and the `profiles` check, landing on the final fallback: `/onboard`, the brand-new-signup path. An existing, correctly-enrolled student was misidentified as a first-time user purely because of a swallowed error.
+
+**The fix:** replaced `.maybeSingle()` with `.limit(1)` and read the first row of the returned array, for **both** the teacher and student lookups in **both** files, plus explicit error logging so a real DB error is no longer invisible:
+
+```ts
+const { data: teacherRows, error: teacherErr } = await adminDb
+  .from("teachers")
+  .select("id, institution_id")
+  .ilike("email", email)
+  .limit(1);
+if (teacherErr) console.error("[auth/callback] teacher lookup error:", teacherErr);
+const teacher = teacherRows?.[0];
+```
+
+**Why not just add a `unique (institution_id, email)` constraint on `students` (mirroring `teachers`)?** Because unlike teachers, a student legitimately *can* have multiple rows with the same email within one institution (multi-batch enrollment is a real, intentional use case in this data model — one row per teacher/batch assignment). A hard uniqueness constraint would reject valid enrollments. `.limit(1)` fixes the actual bug (an unhandled multi-row error) without changing what the schema allows.
+
+---
+
+## 19. Glossary
 
 | Term | Meaning |
 |---|---|

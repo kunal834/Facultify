@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 function createAdminDb() {
   return createClient(
@@ -11,7 +11,10 @@ function createAdminDb() {
   );
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const body  = await request.json().catch(() => ({} as { setup?: boolean }));
+  const setup = body?.setup === true;
+
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,12 +41,19 @@ export async function POST() {
   const email = (user.email ?? "").toLowerCase();
   console.log("[finalize] user.id:", user.id, "email:", email);
 
-  const { data: teacher, error: teacherErr } = await adminDb
+  // .maybeSingle() throws (and silently returns `data: null`) if more than one
+  // row matches — which happens whenever an email isn't unique across the
+  // table (e.g. a student enrolled by two teachers, or the same email reused
+  // in two institutions). .limit(1) + reading the first row tolerates that
+  // instead of misidentifying an existing user as brand new and sending them
+  // to /onboard (create-institute) instead of their real dashboard.
+  const { data: teacherRows, error: teacherErr } = await adminDb
     .from("teachers")
     .select("id, institution_id")
     .ilike("email", email)
-    .maybeSingle();
-  console.log("[finalize] teacher lookup →", teacher, "error:", teacherErr);
+    .limit(1);
+  console.log("[finalize] teacher lookup →", teacherRows, "error:", teacherErr);
+  const teacher = teacherRows?.[0];
 
   if (teacher) {
     await adminDb.from("profiles").upsert(
@@ -51,14 +61,16 @@ export async function POST() {
       { onConflict: "id" }
     );
     await adminDb.from("teachers").update({ user_id: user.id }).eq("id", teacher.id);
-    return NextResponse.json({ destination: "/teacher" });
+    return NextResponse.json({ destination: setup ? "/auth/set-password?next=/teacher" : "/teacher" });
   }
 
-  const { data: student } = await adminDb
+  const { data: studentRows, error: studentErr } = await adminDb
     .from("students")
     .select("id, institution_id")
-    .ilike("email", email)        // same fix
-    .maybeSingle();
+    .ilike("email", email)
+    .limit(1);
+  if (studentErr) console.error("[finalize] student lookup error:", studentErr);
+  const student = studentRows?.[0];
 
   if (student) {
     await adminDb.from("profiles").upsert(

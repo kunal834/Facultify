@@ -60,16 +60,22 @@ export async function POST(request: NextRequest) {
     ? `${origin}/invite/teacher/${teacherId}`
     : `${origin}/auth/confirm`;
 
+  // First-time invite links always land on a brand-new auth user with no
+  // password set yet — ?setup=1 tells the invite-acceptance page to route
+  // the teacher through creating credentials before reaching their dashboard.
+  const freshInviteRedirect = `${inviteRedirect}${inviteRedirect.includes("?") ? "&" : "?"}setup=1`;
+
   const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
     type: "invite",
     email,
     options: {
       data: { full_name: name, role: "teacher" },
-      redirectTo: inviteRedirect,
+      redirectTo: freshInviteRedirect,
     },
   });
 
   // If the user already has a Supabase account, fall back to a sign-in magic link
+  // (they've already been through setup once, so skip the password step)
   let magicLink: string;
   if (linkData?.properties?.action_link) {
     magicLink = linkData.properties.action_link;

@@ -14,12 +14,14 @@ export default function TeacherInvitePage() {
   useEffect(() => {
     (async () => {
       const params = new URLSearchParams(window.location.search);
+      const setup = params.get("setup") === "1";
 
       // PKCE flow: Supabase sent ?code= — do a full HTTP navigation so the
       // browser correctly receives the Set-Cookie headers from /auth/callback.
       const code = params.get("code");
       if (code) {
-        window.location.replace(`/auth/callback?code=${code}`);
+        const qs = setup ? `?code=${code}&setup=1` : `?code=${code}`;
+        window.location.replace(`/auth/callback${qs}`);
         return;
       }
 
@@ -67,10 +69,14 @@ export default function TeacherInvitePage() {
       }
 
       try {
-        const res  = await fetch("/api/auth/finalize", { method: "POST" });
+        const res = await fetch("/api/auth/finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ setup }),
+        });
         const json = await res.json();
         if (json.error) { setError(json.error); return; }
-        router.replace(json.destination ?? "/teacher");   // finalize always returns /teacher for teachers
+        router.replace(json.destination ?? "/teacher");   // finalize returns /auth/set-password?next=/teacher on fresh invites
       } catch {
         setError("Something went wrong. Please try again.");
       }

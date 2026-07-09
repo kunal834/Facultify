@@ -12,8 +12,9 @@ function createAdminDb() {
 }
 
 export async function GET(request: NextRequest) {
-  const url  = new URL(request.url);
-  const code = url.searchParams.get("code");
+  const url   = new URL(request.url);
+  const code  = url.searchParams.get("code");
+  const setup = url.searchParams.get("setup") === "1";
 
   if (!code) {
     return NextResponse.redirect(new URL("/auth/login?error=no_code", request.url));
@@ -48,11 +49,18 @@ export async function GET(request: NextRequest) {
   const adminDb = createAdminDb();
   const email = (user.email ?? "").toLowerCase();
 
-  const { data: teacher } = await adminDb
+  // .maybeSingle() throws (and silently returns `data: null`) if more than one
+  // row matches — which happens whenever an email isn't unique across the
+  // table (e.g. a student enrolled by two teachers, or the same email reused
+  // in two institutions). .limit(1) + reading the first row tolerates that
+  // instead of misidentifying an existing user as brand new.
+  const { data: teacherRows, error: teacherErr } = await adminDb
     .from("teachers")
     .select("id, institution_id")
     .ilike("email", email)
-    .maybeSingle();
+    .limit(1);
+  if (teacherErr) console.error("[auth/callback] teacher lookup error:", teacherErr);
+  const teacher = teacherRows?.[0];
 
   if (teacher) {
     await adminDb.from("profiles").upsert(
@@ -60,14 +68,17 @@ export async function GET(request: NextRequest) {
       { onConflict: "id" }
     );
     await adminDb.from("teachers").update({ user_id: user.id }).eq("id", teacher.id);
-    return NextResponse.redirect(new URL("/teacher", request.url));
+    const teacherDest = setup ? "/auth/set-password?next=/teacher" : "/teacher";
+    return NextResponse.redirect(new URL(teacherDest, request.url));
   }
 
-  const { data: student } = await adminDb
+  const { data: studentRows, error: studentErr } = await adminDb
     .from("students")
     .select("id, institution_id")
     .ilike("email", email)
-    .maybeSingle();
+    .limit(1);
+  if (studentErr) console.error("[auth/callback] student lookup error:", studentErr);
+  const student = studentRows?.[0];
 
   if (student) {
     await adminDb.from("profiles").upsert(
