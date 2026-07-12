@@ -67,31 +67,37 @@ export async function POST(request: NextRequest) {
     dodo_customer_id: string | null;
   };
 
-  const dodo = getDodo();
+  try {
+    const dodo = getDodo();
 
-  // Reuse the existing Dodo customer, or create one on first checkout
-  let customerId = inst.dodo_customer_id;
-  if (!customerId) {
-    const customer = await dodo.customers.create({
-      email: inst.admin_email,
-      name: inst.name,
+    // Reuse the existing Dodo customer, or create one on first checkout
+    let customerId = inst.dodo_customer_id;
+    if (!customerId) {
+      const customer = await dodo.customers.create({
+        email: inst.admin_email,
+        name: inst.name,
+      });
+      customerId = customer.customer_id;
+      await adminClient
+        .from("institutions")
+        .update({ dodo_customer_id: customerId })
+        .eq("id", institutionId);
+    }
+
+    const origin = process.env.NEXT_PUBLIC_APP_URL!;
+    const productId = getDodoProductId(tier, billingCycle as BillingCycle);
+
+    const session = await dodo.checkoutSessions.create({
+      product_cart: [{ product_id: productId, quantity: 1 }],
+      customer: { customer_id: customerId },
+      return_url: `${origin}/admin/billing?checkout=success`,
+      metadata: { institutionId, tier, billingCycle },
     });
-    customerId = customer.customer_id;
-    await adminClient
-      .from("institutions")
-      .update({ dodo_customer_id: customerId })
-      .eq("id", institutionId);
+
+    return NextResponse.json({ url: session.checkout_url });
+  } catch (err) {
+    console.error("[billing/checkout] failed:", err);
+    const message = err instanceof Error ? err.message : "Could not start checkout.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const origin = process.env.NEXT_PUBLIC_APP_URL!;
-  const productId = getDodoProductId(tier, billingCycle as BillingCycle);
-
-  const session = await dodo.checkoutSessions.create({
-    product_cart: [{ product_id: productId, quantity: 1 }],
-    customer: { customer_id: customerId },
-    return_url: `${origin}/admin/billing?checkout=success`,
-    metadata: { institutionId, tier, billingCycle },
-  });
-
-  return NextResponse.json({ url: session.checkout_url });
 }

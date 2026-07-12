@@ -323,6 +323,7 @@ export default function TeacherStudentsPage() {
           teacherName:     teacherDisplayName,
           batchName,
           institutionName,
+          studentId:       s.id,
         }),
       });
       if (!res.ok) {

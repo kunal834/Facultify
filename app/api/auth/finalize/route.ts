@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       { onConflict: "id" }
     );
     await adminDb.from("students").update({ user_id: user.id }).eq("id", student.id);
-    return NextResponse.json({ destination: "/student" });
+    return NextResponse.json({ destination: setup ? "/auth/set-password?next=/student" : "/student" });
   }
 
   // Existing profile — route directly to their dashboard

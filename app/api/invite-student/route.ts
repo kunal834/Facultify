@@ -6,7 +6,7 @@ import { sendStudentInviteEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const { email, studentName, teacherName, batchName, institutionName } = body ?? {};
+  const { email, studentName, teacherName, batchName, institutionName, studentId } = body ?? {};
 
   if (!email || !studentName || !teacherName) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -49,17 +49,30 @@ export async function POST(request: NextRequest) {
   // which can reflect a proxy or preview domain instead of facultify.in
   const origin = process.env.NEXT_PUBLIC_APP_URL!;
 
+  // Dedicated invite-acceptance page for this specific student.
+  // Using /invite/student/[id] instead of /auth/confirm avoids the student
+  // layout's stale-store redirect bug entirely — this page has no layout.
+  const inviteRedirect = studentId
+    ? `${origin}/invite/student/${studentId}`
+    : `${origin}/auth/confirm`;
+
+  // First-time invite links always land on a brand-new auth user with no
+  // password set yet — ?setup=1 tells the invite-acceptance page to route
+  // the student through creating credentials before reaching their dashboard.
+  const freshInviteRedirect = `${inviteRedirect}${inviteRedirect.includes("?") ? "&" : "?"}setup=1`;
+
   // Generate an invite magic link (does NOT send Supabase's default email)
   const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
     type: "invite",
     email,
     options: {
       data: { full_name: studentName, role: "student" },
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: freshInviteRedirect,
     },
   });
 
   // If the user already has a Supabase account, fall back to a sign-in magic link
+  // (they've already been through setup once, so skip the password step)
   let magicLink: string;
   if (linkData?.properties?.action_link) {
     magicLink = linkData.properties.action_link;
@@ -67,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { data: signinData } = await adminClient.auth.admin.generateLink({
       type: "magiclink",
       email,
-      options: { redirectTo: `${origin}/auth/confirm` },
+      options: { redirectTo: inviteRedirect },
     });
     magicLink = signinData?.properties?.action_link ?? `${origin}/auth/login`;
   } else if (linkError) {

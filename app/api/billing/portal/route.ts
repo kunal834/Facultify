@@ -65,9 +65,14 @@ export async function POST(request: NextRequest) {
   }
 
   const origin = process.env.NEXT_PUBLIC_APP_URL!;
-  const session = await getDodo().customers.customerPortal.create(customerId, {
-    return_url: `${origin}/admin/billing`,
-  });
-
-  return NextResponse.json({ url: session.link });
+  try {
+    const session = await getDodo().customers.customerPortal.create(customerId, {
+      return_url: `${origin}/admin/billing`,
+    });
+    return NextResponse.json({ url: session.link });
+  } catch (err) {
+    console.error("[billing/portal] failed:", err);
+    const message = err instanceof Error ? err.message : "Could not open billing portal.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
