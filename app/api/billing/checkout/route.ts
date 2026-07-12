@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getDodo, getDodoProductId, isPaidTier, type BillingCycle } from "@/lib/dodo";
+import { getDodo, getDodoProductId, getOrCreateDodoCustomer, isPaidTier, type BillingCycle } from "@/lib/dodo";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -75,19 +75,10 @@ export async function POST(request: NextRequest) {
   try {
     const dodo = getDodo();
 
-    // Reuse the existing Dodo customer, or create one on first checkout
-    let customerId = inst.dodo_customer_id;
-    if (!customerId) {
-      const customer = await dodo.customers.create({
-        email: inst.admin_email,
-        name: inst.name,
-      });
-      customerId = customer.customer_id;
-      await adminClient
-        .from("institutions")
-        .update({ dodo_customer_id: customerId })
-        .eq("id", institutionId);
-    }
+    // Reuse the existing Dodo customer, or create one — self-healing if the
+    // stored id is stale (e.g. left over from test_mode before live products
+    // were added, see learn.md §20).
+    const customerId = await getOrCreateDodoCustomer(adminClient, institutionId, inst);
 
     const origin = process.env.NEXT_PUBLIC_APP_URL!;
     const productId = getDodoProductId(tier, billingCycle as BillingCycle);
