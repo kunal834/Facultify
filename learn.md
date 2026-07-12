@@ -1069,6 +1069,26 @@ export async function getOrCreateDodoCustomer(adminClient, institutionId, instit
 
 **Only `NotFoundError` is treated as "self-heal", not the error path:** other Dodo errors — bad API key, network failure, rate limiting — are real problems that self-healing would incorrectly paper over (e.g. silently spawning a new customer every time the API key is momentarily wrong). The fix uses the SDK's typed `NotFoundError` (`err instanceof NotFoundError`, from `dodopayments`'s exported error classes, each tagged with its HTTP status) to narrowly target *only* the "customer genuinely doesn't exist" case.
 
+### Manual Recovery via the Supabase SQL Editor
+
+The code now self-heals on the *next* checkout/portal attempt, but if billing is already broken in production right now, clearing the stale column directly unblocks it immediately (Dashboard → SQL Editor):
+
+```sql
+-- Target one specific institution (the id from the 404 message)
+update institutions set dodo_customer_id = null
+where dodo_customer_id = 'cus_0Nj1yQW3p3FP91AzvXgaN';
+```
+
+If you don't know which institution owns the stale id, or you want to reset every institution at once (safe now that the code self-heals either way):
+
+```sql
+-- Reset every institution's Dodo customer link
+update institutions set dodo_customer_id = null
+where dodo_customer_id is not null;
+```
+
+After either statement, the next checkout attempt creates a brand-new Dodo customer under whichever environment `DODO_PAYMENTS_ENVIRONMENT`/`DODO_PAYMENTS_API_KEY` currently point to, and re-saves it to `dodo_customer_id`.
+
 ### The Separate, Unrelated `getUser failed` Diagnostic
 
 Both routes also log cookie names (not values) when `supabase.auth.getUser()` returns no user, before the customer-lookup logic even runs. This is unrelated to the Dodo customer issue above — it's a temporary diagnostic for a session/cookie problem causing `401 Unauthorized` on billing routes in production. It should be removed once that specific auth issue is confirmed fixed; left in place indefinitely, it would just log on every expired-session hit against these routes.
