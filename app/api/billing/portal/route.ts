@@ -29,8 +29,13 @@ export async function POST(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
   if (!user) {
+    console.error(
+      "[billing/portal] getUser failed — cookies present:",
+      cookieStore.getAll().map((c) => c.name),
+      "error:", userErr?.message
+    );
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
