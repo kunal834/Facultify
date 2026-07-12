@@ -1,5 +1,6 @@
-import DodoPayments from 'dodopayments'
+import DodoPayments, { NotFoundError } from 'dodopayments'
 import type { SubscriptionTier } from '@/lib/types'
+import type { createAdminClient } from '@/lib/supabase/admin'
 
 // Server-side only — never import this file from a Client Component.
 // Lazily constructed (like createAdminClient() in lib/supabase/admin.ts) so a
@@ -47,4 +48,39 @@ export function getDodoProductId(tier: PaidTier, billingCycle: BillingCycle): st
 
 export function isPaidTier(tier: SubscriptionTier): tier is PaidTier {
   return tier === 'starter' || tier === 'institution' || tier === 'campus'
+}
+
+// A stored dodo_customer_id can go stale — most commonly when the project
+// switches from test_mode to live_mode (or the Dodo sandbox gets reset).
+// Dodo customers are scoped per environment/API key, so an old id 404s
+// against the current one. This resolves a usable customer id for an
+// institution, self-healing by creating a fresh customer when the stored
+// one no longer exists instead of letting checkout hard-fail.
+export async function getOrCreateDodoCustomer(
+  adminClient: ReturnType<typeof createAdminClient>,
+  institutionId: string,
+  institution: { name: string; admin_email: string; dodo_customer_id: string | null }
+): Promise<string> {
+  const dodo = getDodo()
+
+  if (institution.dodo_customer_id) {
+    try {
+      await dodo.customers.retrieve(institution.dodo_customer_id)
+      return institution.dodo_customer_id
+    } catch (err) {
+      if (!(err instanceof NotFoundError)) throw err
+      // Stale id (e.g. left over from test_mode) — fall through and recreate.
+    }
+  }
+
+  const customer = await dodo.customers.create({
+    email: institution.admin_email,
+    name: institution.name,
+  })
+  await adminClient
+    .from('institutions')
+    .update({ dodo_customer_id: customer.customer_id })
+    .eq('id', institutionId)
+
+  return customer.customer_id
 }

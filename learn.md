@@ -24,7 +24,8 @@ A plain-language walkthrough of how this project is built, what every technology
 16. [Reviewing a Submitted Test — Answer Review Mode](#16-reviewing-a-submitted-test--answer-review-mode)
 17. [Environment Variables & Invite Link Origin](#17-environment-variables--invite-link-origin)
 18. [Production Fixes — Teacher Password Setup & Magic-Link Misrouting](#18-production-fixes--teacher-password-setup--magic-link-misrouting)
-19. [Glossary](#19-glossary)
+19. [Billing — Dodo Payments Integration](#19-billing--dodo-payments-integration)
+20. [Glossary](#20-glossary)
 
 ---
 
@@ -991,7 +992,110 @@ const teacher = teacherRows?.[0];
 
 ---
 
-## 19. Glossary
+## 19. Billing — Dodo Payments Integration
+
+### What Dodo Payments Is
+
+Dodo Payments is the merchant-of-record payment processor handling institution subscriptions (`starter`, `institution`, `campus` tiers — `free` never touches Dodo at all). "Merchant of record" means Dodo, not Facultify, is the legal seller — it handles tax/compliance, card processing, and subscription billing, and exposes an API + hosted checkout/portal pages so the app never touches raw card data.
+
+### The Pieces
+
+| Piece | Where | Purpose |
+|---|---|---|
+| `lib/dodo.ts` | Server-only | Lazily-constructed Dodo SDK client, product-id lookup, customer get-or-create |
+| `app/api/billing/checkout/route.ts` | Server route | Starts a new subscription checkout session |
+| `app/api/billing/portal/route.ts` | Server route | Opens Dodo's hosted "manage my subscription" portal |
+| `institutions.dodo_customer_id` | Database column | Links one institution to one Dodo customer record |
+| `DODO_PAYMENTS_API_KEY` / `DODO_PAYMENTS_ENVIRONMENT` | Env vars | Auth + which Dodo environment (`test_mode` / `live_mode`) to call |
+| `DODO_PRICE_<TIER>_<CYCLE>` (×6) | Env vars | Maps `(tier, billingCycle)` → the Dodo product id created in the dashboard |
+
+### The Checkout Flow
+
+1. Admin clicks "Upgrade" on `/admin/billing`, choosing a tier + monthly/annual.
+2. `POST /api/billing/checkout` verifies the caller is the admin of that institution (same session + `profiles` role check pattern used everywhere else — see [§8](#8-authentication-flow)).
+3. `getOrCreateDodoCustomer()` (`lib/dodo.ts`) resolves a Dodo customer for the institution — reusing `institutions.dodo_customer_id` if it still exists, or creating a fresh one (see self-healing below).
+4. `getDodoProductId(tier, billingCycle)` looks up the right `DODO_PRICE_*` env var. If it's unset, this throws immediately with a message naming exactly which var is missing — this is the error you see if a tier/cycle combination was never given a product in the Dodo dashboard.
+5. `dodo.checkoutSessions.create()` returns a hosted checkout URL; the browser is redirected there. After payment, Dodo redirects back to `/admin/billing?checkout=success`.
+
+### The Portal Flow
+
+`POST /api/billing/portal` is simpler: it just opens Dodo's hosted subscription-management page for the institution's existing `dodo_customer_id`. If there's no `dodo_customer_id` yet (institution has never checked out), it returns a 400 telling the admin to upgrade first — there's nothing to manage.
+
+### Setting Up a Fresh Dodo Integration From Zero
+
+This is the checklist for going from "no Dodo account" to "checkout works in production":
+
+1. **Create the products** in the Dodo dashboard — one product per `(tier, billingCycle)` pair: `starter`/monthly, `starter`/annual, `institution`/monthly, `institution`/annual, `campus`/monthly, `campus`/annual (6 total).
+2. **Copy each product's id** into the matching `DODO_PRICE_*` env var (see the table above / `.env.local.example`).
+3. **Set `DODO_PAYMENTS_API_KEY`** to the API key from the Dodo dashboard — use the test-mode key while developing, the live-mode key once ready to accept real cards.
+4. **Set `DODO_PAYMENTS_ENVIRONMENT`** to `test_mode` or `live_mode` to match whichever key you set. `lib/dodo.ts` reads this directly — there is no auto-detection from the key itself.
+5. Test a full checkout in `test_mode` with Dodo's test card numbers before ever flipping to `live_mode`.
+
+### Why a Stale `dodo_customer_id` Causes `404 Customer ... not found`
+
+**The bug this section exists to explain:** after adding real products and switching to a live API key, checkout/portal started failing with `404 Customer cus_xxx not found`, even though nothing about the *code* had changed.
+
+**Root cause:** Dodo customer records are scoped to the environment (test vs live) and, practically, to the API key/account they were created under. `institutions.dodo_customer_id` was set the first time that institution ever checked out — if that happened back when the project was still on `test_mode` (or a sandbox that later got reset), the id it stored refers to a customer that simply doesn't exist under the current `live_mode` key. Both routes reused that id blindly:
+- Checkout passed it straight into `checkoutSessions.create({ customer: { customer_id } })`.
+- Portal passed it straight into `customers.customerPortal.create(customerId)`.
+
+Neither checked whether the customer still existed before using it, so both hard-failed with Dodo's 404 the moment the environment changed underneath them.
+
+**Why this matters beyond a one-time fix:** manually nulling the column in Supabase (`update institutions set dodo_customer_id = null where ...`) unblocks *today's* error, but the same class of bug recurs any time the underlying customer disappears from Dodo's side — a sandbox reset during development, a test-mode cleanup, or (less likely, but possible) an account migration. Fixing the code once means no future manual DB surgery is needed for the same root cause.
+
+**The self-healing fix (`getOrCreateDodoCustomer()` in `lib/dodo.ts`):**
+
+```typescript
+export async function getOrCreateDodoCustomer(adminClient, institutionId, institution) {
+  const dodo = getDodo()
+  if (institution.dodo_customer_id) {
+    try {
+      await dodo.customers.retrieve(institution.dodo_customer_id)
+      return institution.dodo_customer_id   // still valid — reuse it
+    } catch (err) {
+      if (!(err instanceof NotFoundError)) throw err
+      // stale id — fall through and recreate
+    }
+  }
+  const customer = await dodo.customers.create({ email: institution.admin_email, name: institution.name })
+  await adminClient.from('institutions').update({ dodo_customer_id: customer.customer_id }).eq('id', institutionId)
+  return customer.customer_id
+}
+```
+
+`checkoutSessions.create` can always recover on its own: if the stored id is dead, this creates a brand-new Dodo customer and persists it, and checkout proceeds normally — no manual intervention needed.
+
+**Why the portal route handles it differently:** the portal shows an *existing* subscription's management page. If `customerPortal.create()` 404s on a stale id, silently creating a fresh, blank customer would produce a portal page with nothing in it (no subscription) — more confusing than the error itself. Instead, the portal route catches the `NotFoundError`, clears the stale `dodo_customer_id` (so the next checkout attempt starts clean), and returns a clear message: *"Your billing account reference was out of date and has been reset. Please upgrade again to start a new subscription."*
+
+**Only `NotFoundError` is treated as "self-heal", not the error path:** other Dodo errors — bad API key, network failure, rate limiting — are real problems that self-healing would incorrectly paper over (e.g. silently spawning a new customer every time the API key is momentarily wrong). The fix uses the SDK's typed `NotFoundError` (`err instanceof NotFoundError`, from `dodopayments`'s exported error classes, each tagged with its HTTP status) to narrowly target *only* the "customer genuinely doesn't exist" case.
+
+### Manual Recovery via the Supabase SQL Editor
+
+The code now self-heals on the *next* checkout/portal attempt, but if billing is already broken in production right now, clearing the stale column directly unblocks it immediately (Dashboard → SQL Editor):
+
+```sql
+-- Target one specific institution (the id from the 404 message)
+update institutions set dodo_customer_id = null
+where dodo_customer_id = 'cus_0Nj1yQW3p3FP91AzvXgaN';
+```
+
+If you don't know which institution owns the stale id, or you want to reset every institution at once (safe now that the code self-heals either way):
+
+```sql
+-- Reset every institution's Dodo customer link
+update institutions set dodo_customer_id = null
+where dodo_customer_id is not null;
+```
+
+After either statement, the next checkout attempt creates a brand-new Dodo customer under whichever environment `DODO_PAYMENTS_ENVIRONMENT`/`DODO_PAYMENTS_API_KEY` currently point to, and re-saves it to `dodo_customer_id`.
+
+### The Separate, Unrelated `getUser failed` Diagnostic
+
+Both routes also log cookie names (not values) when `supabase.auth.getUser()` returns no user, before the customer-lookup logic even runs. This is unrelated to the Dodo customer issue above — it's a temporary diagnostic for a session/cookie problem causing `401 Unauthorized` on billing routes in production. It should be removed once that specific auth issue is confirmed fixed; left in place indefinitely, it would just log on every expired-session hit against these routes.
+
+---
+
+## 20. Glossary
 
 | Term | Meaning |
 |---|---|
