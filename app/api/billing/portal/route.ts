@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDodo } from "@/lib/dodo";
+import { NotFoundError } from "dodopayments";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -76,6 +77,24 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ url: session.link });
   } catch (err) {
+    // A stale customer id (e.g. left over from before live products/keys
+    // were added, see learn.md §20) 404s here. Unlike checkout, we can't
+    // just create a fresh customer — a brand-new customer has no
+    // subscription for the portal to show. Clear the stale id instead so
+    // the UI can prompt the admin to upgrade again, which creates a valid one.
+    if (err instanceof NotFoundError) {
+      await adminClient
+        .from("institutions")
+        .update({ dodo_customer_id: null })
+        .eq("id", institutionId);
+      return NextResponse.json(
+        {
+          error:
+            "Your billing account reference was out of date and has been reset. Please upgrade again to start a new subscription.",
+        },
+        { status: 400 }
+      );
+    }
     console.error("[billing/portal] failed:", err);
     const message = err instanceof Error ? err.message : "Could not open billing portal.";
     return NextResponse.json({ error: message }, { status: 500 });
