@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import {
   Check,
   Building2,
@@ -56,6 +57,16 @@ export default function OnboardPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<OnboardFormData>(DEFAULT_FORM);
   const [loading, setLoading] = useState(false);
+
+  // Admin Email must match the account you're actually signed in as — never a
+  // free-typed value that could drift from the auth session (see onboardInstitution()).
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => {
+        if (user?.email) update("adminEmail", user.email);
+      });
+  }, []);
 
   const update = (field: keyof OnboardFormData, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -196,10 +207,13 @@ export default function OnboardPage() {
                 <Input
                   id="adminEmail"
                   type="email"
-                  placeholder="admin@yourinstitution.edu"
                   value={form.adminEmail}
-                  onChange={(e) => update("adminEmail", e.target.value)}
+                  disabled
+                  readOnly
                 />
+                <p className="text-xs text-muted-foreground">
+                  This is the email you signed in with — it&apos;s your login for this institution.
+                </p>
               </div>
             </CardContent>
           </>
