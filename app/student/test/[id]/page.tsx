@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
+  LayoutGrid,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,7 +101,7 @@ function OptionButton({
       type="button"
       onClick={() => onSelect(optionId)}
       className={cn(
-        "group w-full flex items-center gap-4 px-5 py-4 rounded-xl border-2 text-left",
+        "group w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 rounded-xl border-2 text-left",
         "transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
         selected
           ? "border-blue-500 bg-blue-50 text-blue-900"
@@ -140,7 +142,7 @@ function TrueFalseButton({
       type="button"
       onClick={() => onSelect(optionId)}
       className={cn(
-        "flex-1 py-6 rounded-2xl border-2 font-semibold text-xl transition-all duration-150",
+        "flex-1 py-4 sm:py-6 rounded-2xl border-2 font-semibold text-lg sm:text-xl transition-all duration-150",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
         selected
           ? "border-blue-500 bg-blue-600 text-white shadow-md"
@@ -166,7 +168,7 @@ function ReviewOptionRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-4 px-5 py-4 rounded-xl border-2",
+        "flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 rounded-xl border-2",
         isCorrectOption
           ? "border-emerald-400 bg-emerald-50"
           : isSelected
@@ -231,6 +233,7 @@ function ActiveTestPageInner() {
   // ── Submission UI state ──────────────────────────────────────────────────────
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   // ── Timer state ──────────────────────────────────────────────────────────────
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -511,9 +514,9 @@ function ActiveTestPageInner() {
           </div>
         </header>
 
-        <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-6">
           {/* ── Score summary ────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-wrap items-center gap-6">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-wrap items-center gap-4 sm:gap-6">
             <ScoreBadge
               score={activeSubmission.totalScore}
               maxScore={activeSubmission.maxScore}
@@ -564,7 +567,7 @@ function ActiveTestPageInner() {
             return (
               <div
                 key={q.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8"
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-8"
               >
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div className="flex flex-wrap items-center gap-2">
@@ -662,23 +665,23 @@ function ActiveTestPageInner() {
   return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col overflow-hidden">
       {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
-      <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-5 shrink-0 z-20 shadow-sm">
+      <header className="min-h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center justify-between gap-2 px-3 sm:px-5 py-2 sm:py-0 shrink-0 z-20 shadow-sm">
         {/* Left: brand + title */}
-        <div className="flex items-center gap-3 min-w-0 max-w-[35%]">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="h-8 w-8 rounded-lg bg-blue-600 hidden xs:flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-bold select-none">F</span>
           </div>
           <div className="min-w-0">
             <h1 className="font-semibold text-sm leading-tight truncate text-slate-800">
               {test.title}
             </h1>
-            <p className="text-xs text-slate-400 truncate">{test.subject}</p>
+            <p className="text-xs text-slate-400 truncate hidden sm:block">{test.subject}</p>
           </div>
         </div>
 
         {/* Center: countdown timer */}
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col items-center gap-0.5 shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5">
             <Clock
               className={cn(
                 "h-3.5 w-3.5",
@@ -695,7 +698,7 @@ function ActiveTestPageInner() {
           </div>
           <span
             className={cn(
-              "text-2xl font-mono font-bold tabular-nums leading-none",
+              "flex items-center gap-1 font-mono font-bold tabular-nums leading-none text-base sm:text-2xl",
               isCritical
                 ? "text-red-600 animate-pulse"
                 : isWarning
@@ -703,12 +706,13 @@ function ActiveTestPageInner() {
                 : "text-slate-700"
             )}
           >
+            <Clock className="h-3.5 w-3.5 sm:hidden" />
             {formatMMSS(timeLeft)}
           </span>
           <Progress
             value={timerProgress}
             className={cn(
-              "h-1 w-24 mt-0.5",
+              "h-1 w-16 sm:w-24 mt-0.5 hidden xs:block",
               isCritical
                 ? "[&>div]:bg-red-500"
                 : isWarning
@@ -718,30 +722,40 @@ function ActiveTestPageInner() {
           />
         </div>
 
-        {/* Right: question counter + submit */}
-        <div className="flex items-center gap-4">
+        {/* Right: mobile nav toggle + question counter + submit */}
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <span className="text-sm text-slate-500 hidden sm:block tabular-nums">
             <span className="font-semibold text-slate-700">{currentQuestion + 1}</span>
             <span className="text-slate-400"> / {totalQuestions}</span>
           </span>
           <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="md:hidden shrink-0"
+            onClick={() => setNavOpen(true)}
+            aria-label="Open question navigator"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
             onClick={() => setShowConfirm(true)}
             disabled={submitting}
-            className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+            className="gap-1.5 bg-blue-600 hover:bg-blue-700 px-3 sm:px-4"
           >
             <Send className="h-3.5 w-3.5" />
-            <span>{submitting ? "Submitting…" : "Submit Test"}</span>
+            <span className="hidden xs:inline">{submitting ? "Submitting…" : "Submit Test"}</span>
           </Button>
         </div>
       </header>
 
       {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* ── LEFT: Question area (70%) ──────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-6 py-8 w-full">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* ── LEFT: Question area ──────────────────────────────────────────────── */}
+        <main className="flex-1 overflow-y-auto min-w-0">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 sm:py-8 w-full">
             {/* Question card */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-fade-in">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-8 animate-fade-in">
               {/* Question header row */}
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div className="flex flex-wrap items-center gap-2">
@@ -848,20 +862,20 @@ function ActiveTestPageInner() {
             </div>
 
             {/* ── Prev / Next navigation ─────────────────────────────────────── */}
-            <div className="flex items-center justify-between mt-5">
+            <div className="flex items-center justify-between gap-2 mt-5">
               <Button
                 variant="outline"
                 onClick={() =>
                   setCurrentQuestion((i) => Math.max(0, i - 1))
                 }
                 disabled={currentQuestion === 0}
-                className="gap-1.5"
+                className="gap-1 sm:gap-1.5 px-3 sm:px-4"
               >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
+                <ChevronLeft className="h-4 w-4 shrink-0" />
+                <span className="hidden xs:inline">Previous</span>
               </Button>
 
-              <span className="text-xs text-slate-400 tabular-nums">
+              <span className="text-[11px] sm:text-xs text-slate-400 tabular-nums text-center shrink-0">
                 {answeredCount} of {totalQuestions} answered
               </span>
 
@@ -872,31 +886,55 @@ function ActiveTestPageInner() {
                       Math.min(totalQuestions - 1, i + 1)
                     )
                   }
-                  className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                  className="gap-1 sm:gap-1.5 bg-blue-600 hover:bg-blue-700 px-3 sm:px-4"
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
+                  <span className="hidden xs:inline">Next</span>
+                  <ChevronRight className="h-4 w-4 shrink-0" />
                 </Button>
               ) : (
                 <Button
                   onClick={() => setShowConfirm(true)}
                   disabled={submitting}
-                  className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                  className="gap-1 sm:gap-1.5 bg-blue-600 hover:bg-blue-700 px-3 sm:px-4"
                 >
-                  <Send className="h-4 w-4" />
-                  Submit
+                  <Send className="h-4 w-4 shrink-0" />
+                  <span className="hidden xs:inline">Submit</span>
                 </Button>
               )}
             </div>
           </div>
         </main>
 
-        {/* ── RIGHT: Question navigator (30%) ────────────────────────────────── */}
-        <aside className="w-64 shrink-0 border-l border-slate-200 bg-white overflow-y-auto flex flex-col">
-          <div className="p-4 border-b border-slate-100">
+        {/* ── Mobile backdrop for navigator drawer ─────────────────────────────── */}
+        {navOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            onClick={() => setNavOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* ── RIGHT: Question navigator — static sidebar on desktop, slide-in drawer on mobile ── */}
+        <aside
+          className={cn(
+            "border-l border-slate-200 bg-white overflow-y-auto flex flex-col",
+            "fixed inset-y-0 right-0 z-40 w-72 max-w-[85vw] transition-transform duration-200 ease-out",
+            "md:static md:z-auto md:w-64 md:max-w-none md:shrink-0 md:translate-x-0",
+            navOpen ? "translate-x-0 shadow-xl" : "translate-x-full"
+          )}
+        >
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
               Question Navigator
             </p>
+            <button
+              type="button"
+              onClick={() => setNavOpen(false)}
+              className="md:hidden text-slate-400 hover:text-slate-600"
+              aria-label="Close question navigator"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
           {/* Legend */}
@@ -924,7 +962,10 @@ function ActiveTestPageInner() {
                 <button
                   key={q.id}
                   type="button"
-                  onClick={() => setCurrentQuestion(i)}
+                  onClick={() => {
+                    setCurrentQuestion(i);
+                    setNavOpen(false);
+                  }}
                   className={cn(
                     "h-9 w-full rounded-lg text-xs font-semibold transition-all duration-150 border",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1",
