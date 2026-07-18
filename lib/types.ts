@@ -14,6 +14,8 @@ export type TestStatus = "draft" | "published" | "active" | "closed";
 
 export type SubmissionStatus = "not_started" | "in_progress" | "submitted" | "graded";
 
+export type ExamTrack = "ssc" | "upsc" | "jee" | "neet" | "cuet" | "general";
+
 // ─── Institution & Admin ──────────────────────────────────────────────────────
 
 export interface Institution {
@@ -22,6 +24,8 @@ export interface Institution {
   domain: string;
   adminEmail: string;
   logoUrl?: string;
+  primaryColor: string;
+  secondaryColor: string;
   subscriptionTier: SubscriptionTier;
   maxTeachers: number;
   maxStudents: number;
@@ -29,6 +33,7 @@ export interface Institution {
   isActive: boolean;
   billingStatus: BillingStatus;
   currentPeriodEnd?: string;
+  examTracks?: ExamTrack[];
 }
 
 export interface SubscriptionPlan {
@@ -79,6 +84,7 @@ export interface Batch {
   subject: string;
   studentCount: number;
   createdAt: string;
+  examTrack?: ExamTrack;
 }
 
 export interface Student {
@@ -94,6 +100,7 @@ export interface Student {
   enrolledAt: string;
   overallScore: number;
   testsAttempted: number;
+  examTrack?: ExamTrack;
 }
 
 // ─── Test & Questions ─────────────────────────────────────────────────────────
@@ -140,6 +147,52 @@ export interface MockTest {
   aiGenerated: boolean;
   attemptCount: number;
   avgScore: number;
+  examTrack?: ExamTrack;
+}
+
+// ─── Question Bank ────────────────────────────────────────────────────────────
+// Reusable, taggable questions independent of any test. `institutionId` is
+// undefined for platform-wide shared content (e.g. a shared daily-quiz set).
+
+export interface BankQuestion {
+  id: string;
+  institutionId?: string;
+  createdByTeacherId?: string;
+  examTrack: ExamTrack;
+  topic: string;
+  subject: string;
+  relevantDate?: string;
+  type: QuestionType;
+  text: string;
+  marks: number;
+  difficulty: DifficultyLevel;
+  options?: MCQOption[];
+  correctAnswer?: string;
+  explanation?: string;
+  aiGenerated: boolean;
+  createdAt: string;
+}
+
+export interface BankQuestionFilters {
+  examTrack?: ExamTrack;
+  topic?: string;
+  subject?: string;
+  relevantDate?: string;
+  includesPlatformWide?: boolean;
+}
+
+export interface CreateBankQuestionData {
+  examTrack: ExamTrack;
+  topic: string;
+  subject: string;
+  relevantDate?: string;
+  type: QuestionType;
+  text: string;
+  marks: number;
+  difficulty: DifficultyLevel;
+  options?: { text: string; isCorrect: boolean }[];
+  correctAnswer?: string;
+  explanation?: string;
 }
 
 // ─── Submission & Answers ─────────────────────────────────────────────────────
@@ -266,4 +319,27 @@ export interface AIGeneratorConfig {
   marksPerQuestion: number;
   includeExplanations: boolean;
   gradeLevel: string;
+  examTrack?: ExamTrack;
+}
+
+export interface BattleSession {
+  id: string;
+  cohortId: string;
+  topic: string;
+  status: 'waiting' | 'active' | 'completed';
+  player1Id: string;
+  player2Id?: string;
+  player1Score: number;
+  player2Score: number;
+  questions: any[]; // JSON serialized questions array
+  createdAt: string;
+}
+
+export interface BattleLog {
+  battleId: string;
+  playerId: string;
+  questionIndex: number;
+  selectedOption?: number;
+  isCorrect: boolean;
+  timeSpentMs?: number;
 }

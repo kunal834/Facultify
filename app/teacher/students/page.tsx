@@ -271,7 +271,7 @@ export default function TeacherStudentsPage() {
     rollNumber: "",
     batchId: "",
   });
-  const [batchForm, setBatchForm] = useState({ name: "", subject: "" });
+  const [batchForm, setBatchForm] = useState({ name: "", subject: "", examTrack: "general" });
 
   useEffect(() => {
     Promise.all([getStudents(teacherId), getBatches(teacherId)]).then(
@@ -358,13 +358,14 @@ export default function TeacherStudentsPage() {
       const b = await createBatch({
         name: batchForm.name,
         subject: batchForm.subject,
+        examTrack: batchForm.examTrack as any,
         teacherId,
         institutionId,
       });
       setBatches((prev) => [...prev, b]);
       toast.success(`Batch "${b.name}" created.`);
       setBatchOpen(false);
-      setBatchForm({ name: "", subject: "" });
+      setBatchForm({ name: "", subject: "", examTrack: "general" });
     } finally {
       setSubmitting(false);
     }
@@ -697,6 +698,31 @@ export default function TeacherStudentsPage() {
                   setBatchForm((f) => ({ ...f, subject: e.target.value }))
                 }
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="batch-track">Target Exam Track *</Label>
+              <Select
+                value={batchForm.examTrack}
+                onValueChange={(v) =>
+                  setBatchForm((f) => ({ ...f, examTrack: v }))
+                }
+              >
+                <SelectTrigger id="batch-track">
+                  <SelectValue placeholder="Select Exam Track" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(activeSession?.role === "teacher" ? activeSession.institution.examTracks ?? ["general"] : ["general"]).map((track) => (
+                    <SelectItem key={track} value={track}>
+                      {track === "jee" ? "JEE Mains/Advanced" :
+                       track === "neet" ? "NEET Entrance" :
+                       track === "ssc" ? "SSC CGL / Banking" :
+                       track === "upsc" ? "UPSC Civil Services" :
+                       track === "cuet" ? "CUET Exam" :
+                       "General / School Boards"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

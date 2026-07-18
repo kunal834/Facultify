@@ -70,6 +70,8 @@ export async function onboardInstitution(data: OnboardFormData): Promise<Institu
     name: data.institutionName,
     domain: data.domain,
     adminEmail: data.adminEmail,
+    primaryColor: "#3B6FFF",
+    secondaryColor: "#7C3AED",
     subscriptionTier: "free",
     maxTeachers: FREE_PLAN_LIMITS.maxTeachers,
     maxStudents: FREE_PLAN_LIMITS.maxStudents,

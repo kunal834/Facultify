@@ -2,24 +2,36 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { User, Mail, Hash, BookOpen, Shield } from "lucide-react";
+import { User, Mail, Hash, BookOpen, Shield, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
 import { getInitials } from "@/lib/utils";
+import { updateStudentExamTrack } from "@/lib/supabase-service";
 
 export default function StudentProfilePage() {
-  const { activeSession } = useAppStore();
+  const { activeSession, initSession } = useAppStore();
   const student = activeSession?.role === "student" ? activeSession.user : null;
   const institution = activeSession?.role === "student" ? activeSession.institution : null;
   const teacher = activeSession?.role === "student" ? activeSession.teacher : null;
 
   const [saving, setSaving] = useState(false);
+  const [savingTrack, setSavingTrack] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<string>(
+    student?.examTrack ?? "general"
+  );
   const [changingPw, setChangingPw] = useState(false);
   const [pwData, setPwData] = useState({ current: "", next: "", confirm: "" });
   const [pwError, setPwError] = useState("");
@@ -29,6 +41,20 @@ export default function StudentProfilePage() {
     await new Promise((r) => setTimeout(r, 800));
     setSaving(false);
     toast.success("Profile updated successfully.");
+  }
+
+  async function handleSaveTrack() {
+    if (!student) return;
+    setSavingTrack(true);
+    try {
+      await updateStudentExamTrack(student.id, selectedTrack as any);
+      await initSession();
+      toast.success("Target exam track updated successfully!");
+    } catch {
+      toast.error("Failed to update target exam track. Please try again.");
+    } finally {
+      setSavingTrack(false);
+    }
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -92,6 +118,42 @@ export default function StudentProfilePage() {
 
         {/* Edit form + password */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Target Prep Exam */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Target Prep Exam</CardTitle>
+              <CardDescription>
+                Choose your primary target exam track. This configures daily syllabus topics, active test priorities, and AIR safety borders.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="exam-track">Target Exam Track</Label>
+                <Select value={selectedTrack} onValueChange={setSelectedTrack}>
+                  <SelectTrigger id="exam-track" className="rounded-xl border-slate-200">
+                    <SelectValue placeholder="Select Target Exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(institution?.examTracks ?? ["general"]).map((track) => (
+                      <SelectItem key={track} value={track}>
+                        {track === "jee" ? "JEE Mains/Advanced" :
+                         track === "neet" ? "NEET Entrance" :
+                         track === "ssc" ? "SSC CGL / Banking" :
+                         track === "upsc" ? "UPSC Civil Services" :
+                         track === "cuet" ? "CUET Exam" :
+                         "General / School Boards"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button onClick={handleSaveTrack} disabled={savingTrack}>
+                {savingTrack ? "Updating..." : "Update Target Exam"}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Personal details */}
           <Card>
             <CardHeader><CardTitle className="text-base font-semibold">Personal Information</CardTitle></CardHeader>

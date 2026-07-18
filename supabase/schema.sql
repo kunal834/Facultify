@@ -14,6 +14,7 @@ create type difficulty_level as enum ('easy', 'medium', 'hard');
 create type test_status     as enum ('draft', 'published', 'active', 'closed');
 create type submission_status as enum ('not_started', 'in_progress', 'submitted', 'graded');
 create type invoice_status  as enum ('paid', 'pending', 'overdue');
+create type exam_track      as enum ('ssc', 'upsc', 'jee', 'neet', 'cuet', 'general');
 
 -- ─── Institutions ─────────────────────────────────────────────────────────────
 create table institutions (
@@ -22,6 +23,8 @@ create table institutions (
   domain                text not null unique,
   admin_email           text not null unique,
   logo_url              text,
+  primary_color         text not null default '#3B6FFF',
+  secondary_color       text not null default '#7C3AED',
   subscription_tier     subscription_tier not null default 'free',
   max_teachers          integer not null default 1,
   max_students          integer not null default 20,
@@ -32,6 +35,7 @@ create table institutions (
   dodo_customer_id      text,
   dodo_subscription_id  text,
   current_period_end    timestamptz,
+  exam_tracks           text[] not null default array['general']::text[],
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
 );
@@ -72,6 +76,7 @@ create table batches (
   name            text not null,
   subject         text not null,
   student_count   integer not null default 0,
+  exam_track      text not null default 'general',
   created_at      timestamptz not null default now()
 );
 
@@ -87,6 +92,7 @@ create table students (
   roll_number     text not null,
   avatar_url      text,
   is_active       boolean not null default true,
+  exam_track      text not null default 'general',
   enrolled_at     timestamptz not null default now()
 );
 
@@ -110,6 +116,7 @@ create table tests (
   ai_generated      boolean not null default false,
   attempt_count     integer not null default 0,
   avg_score         numeric(5,2) not null default 0,
+  exam_track        text not null default 'general',
   created_at        timestamptz not null default now()
 );
 
@@ -134,6 +141,42 @@ create table question_options (
   question_id  uuid not null references questions on delete cascade,
   text         text not null,
   is_correct   boolean not null default false
+);
+
+-- ─── Question Bank ────────────────────────────────────────────────────────────
+-- Reusable, taggable questions independent of any single test — decoupled
+-- from `questions` (which stays test-owned, cascade-deleted with its test,
+-- so the grading pipeline doesn't change). Tests are built by copying rows
+-- from here into `questions`/`question_options` at creation time; editing a
+-- bank question never retroactively changes a test students already sat.
+--
+-- institution_id is nullable: null rows are platform-wide shared content
+-- (e.g. a shared current-affairs daily quiz set), non-null rows are one
+-- institution's own reusable questions. Only service-role code can create
+-- platform-wide rows — see RLS below.
+create table question_bank (
+  id                     uuid primary key default gen_random_uuid(),
+  institution_id         uuid references institutions on delete cascade,
+  created_by_teacher_id  uuid references teachers on delete set null,
+  exam_track             exam_track not null default 'general',
+  topic                  text not null,
+  subject                text not null,
+  relevant_date          date,     -- for time-bound content, e.g. a specific day's current affairs
+  type                   question_type not null,
+  text                   text not null,
+  marks                  integer not null default 1,
+  difficulty             difficulty_level not null default 'medium',
+  correct_answer         text,     -- text questions only
+  explanation            text,
+  ai_generated           boolean not null default false,
+  created_at             timestamptz not null default now()
+);
+
+create table question_bank_options (
+  id                uuid primary key default gen_random_uuid(),
+  question_bank_id  uuid not null references question_bank on delete cascade,
+  text              text not null,
+  is_correct        boolean not null default false
 );
 
 -- ─── Submissions ──────────────────────────────────────────────────────────────
@@ -192,6 +235,11 @@ create index on tests             (institution_id);
 create index on tests             (batch_id);
 create index on questions         (test_id);
 create index on question_options  (question_id);
+create index on question_bank         (institution_id);
+create index on question_bank         (exam_track);
+create index on question_bank         (topic);
+create index on question_bank         (relevant_date);
+create index on question_bank_options (question_bank_id);
 create index on submissions       (test_id);
 create index on submissions       (student_id);
 create index on submission_answers(submission_id);
@@ -324,6 +372,8 @@ alter table students            enable row level security;
 alter table tests               enable row level security;
 alter table questions           enable row level security;
 alter table question_options    enable row level security;
+alter table question_bank         enable row level security;
+alter table question_bank_options enable row level security;
 alter table submissions         enable row level security;
 alter table submission_answers  enable row level security;
 alter table invoices            enable row level security;
@@ -486,6 +536,53 @@ create policy "qopts_delete" on question_options for delete to authenticated
     )
   ));
 
+-- ─── RLS Policies: question_bank ──────────────────────────────────────────────
+-- Platform-wide rows (institution_id is null) are readable by anyone
+-- authenticated; only service-role code can write them (no insert/update/
+-- delete policy allows a null institution_id — those writes bypass RLS).
+create policy "qbank_select" on question_bank for select to authenticated
+  using (institution_id is null or institution_id = auth_institution_id());
+
+create policy "qbank_insert" on question_bank for insert to authenticated
+  with check (
+    institution_id = auth_institution_id() and
+    (auth_role() = 'admin' or auth_role() = 'teacher')
+  );
+
+create policy "qbank_update" on question_bank for update to authenticated
+  using (institution_id = auth_institution_id() and
+    (auth_role() = 'admin' or created_by_teacher_id = auth_entity_id()))
+  with check (institution_id = auth_institution_id());
+
+create policy "qbank_delete" on question_bank for delete to authenticated
+  using (institution_id = auth_institution_id() and
+    (auth_role() = 'admin' or created_by_teacher_id = auth_entity_id()));
+
+-- ─── RLS Policies: question_bank_options ─────────────────────────────────────
+create policy "qbank_opts_select" on question_bank_options for select to authenticated
+  using (question_bank_id in (
+    select id from question_bank
+    where institution_id is null or institution_id = auth_institution_id()
+  ));
+
+create policy "qbank_opts_insert" on question_bank_options for insert to authenticated
+  with check (question_bank_id in (
+    select id from question_bank where institution_id = auth_institution_id()
+    and (auth_role() = 'admin' or created_by_teacher_id = auth_entity_id())
+  ));
+
+create policy "qbank_opts_update" on question_bank_options for update to authenticated
+  using (question_bank_id in (
+    select id from question_bank where institution_id = auth_institution_id()
+    and (auth_role() = 'admin' or created_by_teacher_id = auth_entity_id())
+  ));
+
+create policy "qbank_opts_delete" on question_bank_options for delete to authenticated
+  using (question_bank_id in (
+    select id from question_bank where institution_id = auth_institution_id()
+    and (auth_role() = 'admin' or created_by_teacher_id = auth_entity_id())
+  ));
+
 -- ─── RLS Policies: submissions ────────────────────────────────────────────────
 create policy "subs_select" on submissions for select to authenticated
   using (
@@ -542,6 +639,39 @@ create policy "sa_update" on submission_answers for update to authenticated
 create policy "invoices_select" on invoices for select to authenticated
   using (institution_id = auth_institution_id() and auth_role() = 'admin');
 
+-- ─── Storage: institution-assets (logos, used on rank cards) ─────────────────
+-- Objects are stored under `{institution_id}/logo.<ext>`. Public read (logos
+-- aren't sensitive and need to be fetchable by the edge card-rendering route
+-- and by anyone viewing a shared card); writes restricted to that
+-- institution's admin.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('institution-assets', 'institution-assets', true, 2097152, array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do nothing;
+
+create policy "institution_assets_public_read" on storage.objects for select to public
+  using (bucket_id = 'institution-assets');
+
+create policy "institution_assets_admin_write" on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'institution-assets' and
+    (storage.foldername(name))[1] = auth_institution_id()::text and
+    auth_role() = 'admin'
+  );
+
+create policy "institution_assets_admin_update" on storage.objects for update to authenticated
+  using (
+    bucket_id = 'institution-assets' and
+    (storage.foldername(name))[1] = auth_institution_id()::text and
+    auth_role() = 'admin'
+  );
+
+create policy "institution_assets_admin_delete" on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'institution-assets' and
+    (storage.foldername(name))[1] = auth_institution_id()::text and
+    auth_role() = 'admin'
+  );
+
 -- ─── View: teachers_with_stats (used in admin teacher list) ──────────────────
 create or replace view teachers_with_stats
   with (security_invoker = true)
@@ -557,3 +687,27 @@ left join (
 left join (
   select teacher_id, count(*)::int as cnt from tests group by teacher_id
 ) tc on tc.teacher_id = t.id;
+
+-- ─── 1v1 Battle Arena ────────────────────────────────────────────────────────
+create table battle_sessions (
+  id                    uuid primary key default gen_random_uuid(),
+  cohort_id             uuid references batches(id) on delete cascade,
+  topic                 text not null,
+  status                text not null default 'waiting',
+  player_1_id           uuid references students(id) on delete cascade,
+  player_2_id           uuid references students(id) on delete cascade,
+  player_1_score        integer not null default 0,
+  player_2_score        integer not null default 0,
+  questions             jsonb not null,
+  created_at            timestamptz not null default now()
+);
+
+create table battle_logs (
+  battle_id             uuid references battle_sessions(id) on delete cascade,
+  player_id             uuid not null,
+  question_index        integer not null,
+  selected_option       integer,
+  is_correct            boolean not null default false,
+  time_spent_ms         integer,
+  primary key (battle_id, player_id, question_index)
+);

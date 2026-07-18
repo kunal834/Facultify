@@ -97,7 +97,12 @@ export default function AIGeneratorPage() {
     }, 600);
 
     try {
-      const test = await generateAITest(config, teacherId, institutionId, batchId);
+      const activeBatch = batches.find((b) => b.id === batchId);
+      const updatedConfig = {
+        ...config,
+        examTrack: activeBatch?.examTrack ?? "general",
+      };
+      const test = await generateAITest(updatedConfig, teacherId, institutionId, batchId);
       clearInterval(msgIntervalRef.current!);
       setGeneratedTest(test);
       setGenState("done");

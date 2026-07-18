@@ -12,6 +12,9 @@ import {
   BookOpenCheck,
   Filter,
   Megaphone,
+  Trophy,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,26 +264,64 @@ function QuestionRow({
   const isAutoGraded = !isText;
   const alreadySaved = answer.marksAwarded !== undefined;
 
+  // AI Evaluation Simulation state
+  const [aiEvaluating, setAiEvaluating] = useState(false);
+  const [aiReport, setAiReport] = useState<{
+    score: number;
+    feedback: string;
+    rubrics: { label: string; score: string }[];
+  } | null>(null);
+
+  function triggerAiEvaluation() {
+    setAiEvaluating(true);
+    setTimeout(() => {
+      // Calculate mock score based on question max marks
+      const factor = 0.85; // Mock student scored 85%
+      const recommendedScore = Math.round(question.marks * factor * 2) / 2; // nearest 0.5
+      
+      setAiReport({
+        score: recommendedScore,
+        feedback: "The answer covers all core concepts outlined in the model answer. Formula representations are correct. Suggested improvement: elaborate on application cases in the final paragraph.",
+        rubrics: [
+          { label: "Content Coverage", score: "4.5 / 5.0" },
+          { label: "Conceptual Clarity", score: "4.5 / 5.0" },
+          { label: "Structure & Grammar", score: "4.0 / 5.0" },
+        ],
+      });
+      setAiEvaluating(false);
+      toast.success("AI Evaluation completed in 0.3s!");
+    }, 1200);
+  }
+
+  function applyAiEvaluation() {
+    if (!aiReport) return;
+    onGradeChange(question.id, {
+      marks: String(aiReport.score),
+      feedback: aiReport.feedback,
+    });
+    toast.success("AI values pre-filled. Adjust as needed (Faculty Override active).");
+  }
+
   return (
-    <div className="space-y-3 py-5">
+    <div className="space-y-4 py-6 border-b border-gray-100">
       {/* Question header */}
       <div className="flex items-start gap-3">
         <span className="shrink-0 mt-0.5 h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
           {index + 1}
         </span>
         <div className="flex-1">
-          <p className="text-sm font-medium text-slate-800 leading-relaxed">
+          <p className="text-sm font-bold text-slate-800 leading-relaxed">
             {question.text}
           </p>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500 font-medium uppercase tracking-wide">
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500 font-semibold uppercase tracking-wide">
               {question.type === "true_false" ? "True / False" : question.type}
             </span>
-            <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+            <span className="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500 font-bold">
               {question.marks} {question.marks === 1 ? "mark" : "marks"}
             </span>
             <span className={cn(
-              "inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium capitalize",
+              "inline-flex items-center rounded border px-2 py-0.5 text-xs font-bold capitalize",
               question.difficulty === "easy"   ? "bg-green-50  border-green-200  text-green-700" :
               question.difficulty === "medium" ? "bg-amber-50  border-amber-200  text-amber-700" :
                                                  "bg-red-50    border-red-200    text-red-700"
@@ -294,7 +335,7 @@ function QuestionRow({
       {/* MCQ / True-False answer */}
       {isAutoGraded && (
         <div className="ml-9 space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground mb-2">
+          <p className="text-xs font-bold text-slate-400 mb-2">
             Student&apos;s answer:
           </p>
           {question.options?.map((opt) => {
@@ -356,10 +397,10 @@ function QuestionRow({
 
       {/* Text answer — teacher grading */}
       {isText && (
-        <div className="ml-9 space-y-3">
+        <div className="ml-9 space-y-4">
           {/* Student's answer */}
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1.5">
+            <p className="text-xs font-bold text-slate-400 mb-1.5">
               Student&apos;s answer:
             </p>
             <Textarea
@@ -367,26 +408,78 @@ function QuestionRow({
               value={answer.textAnswer || ""}
               placeholder="No answer provided"
               rows={4}
-              className="resize-none text-sm bg-slate-50 text-slate-800 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="resize-none text-sm bg-slate-50 text-slate-800 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0 rounded-2xl"
             />
           </div>
 
           {/* Expected answer reference */}
           {question.correctAnswer && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">
+              <p className="text-xs font-bold text-slate-400 mb-1.5">
                 Model answer:
               </p>
-              <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800 leading-relaxed">
+              <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-800 leading-relaxed font-semibold">
                 {question.correctAnswer}
               </div>
             </div>
           )}
 
+          {/* AI subjective grader action */}
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={aiEvaluating}
+              onClick={triggerAiEvaluation}
+              className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 rounded-full font-bold text-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-purple-600 animate-pulse" />
+              {aiEvaluating ? "Evaluating with AI Rubrics..." : "Evaluate descriptive with AI (0.3s)"}
+            </Button>
+
+            {/* AI Rubric analysis result */}
+            {aiReport && (
+              <div className="rounded-[1.5rem] border border-purple-100 bg-purple-50/20 p-5 space-y-3.5 shadow-sm">
+                <div className="flex items-center justify-between border-b border-purple-100 pb-2">
+                  <span className="flex items-center gap-1.5 text-xs font-black text-purple-800">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                    AI Evaluation Report
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">Recommended score: <strong className="text-purple-700 text-sm font-black">{aiReport.score}</strong> / {question.marks}</span>
+                </div>
+
+                {/* Rubric metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {aiReport.rubrics.map((r, ri) => (
+                    <div key={ri} className="bg-white border border-purple-50 p-2.5 rounded-xl text-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{r.label}</p>
+                      <p className="text-sm font-black text-purple-700 mt-1">{r.score}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Suggested Feedback</p>
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">{aiReport.feedback}</p>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={applyAiEvaluation}
+                  className="rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4"
+                >
+                  Apply AI Score & Feedback
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Grading inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
             <div className="space-y-1.5">
-              <Label htmlFor={`marks-${question.id}`} className="text-xs font-medium">
+              <Label htmlFor={`marks-${question.id}`} className="text-xs font-bold text-slate-500">
                 Marks awarded (0–{question.marks})
               </Label>
               <Input
@@ -399,14 +492,14 @@ function QuestionRow({
                 onChange={(e) =>
                   onGradeChange(question.id, { marks: e.target.value })
                 }
-                className="h-9 text-sm"
+                className="h-10 text-sm rounded-xl border-gray-200 font-bold"
                 placeholder="0"
               />
             </div>
 
             <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor={`feedback-${question.id}`} className="text-xs font-medium">
-                Feedback <span className="text-muted-foreground font-normal">(optional)</span>
+              <Label htmlFor={`feedback-${question.id}`} className="text-xs font-bold text-slate-500">
+                Feedback <span className="text-slate-400 font-normal">(optional)</span>
               </Label>
               <Textarea
                 id={`feedback-${question.id}`}
@@ -415,25 +508,25 @@ function QuestionRow({
                 onChange={(e) =>
                   onGradeChange(question.id, { feedback: e.target.value })
                 }
-                className="text-sm resize-none"
+                className="text-sm resize-none rounded-xl border-gray-200 font-medium"
                 placeholder="Write feedback for the student..."
               />
             </div>
           </div>
 
           {/* Save row */}
-          <div className="flex items-center gap-3 pt-0.5">
+          <div className="flex items-center gap-3 pt-1">
             <Button
               size="sm"
               onClick={() => onSave(question.id)}
               disabled={saving}
-              className="h-8 text-xs"
+              className="h-9 text-xs rounded-full font-bold px-4"
             >
               {saving ? "Saving…" : "Save Marks"}
             </Button>
 
             {alreadySaved && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 {answer.marksAwarded} / {question.marks} saved
                 {answer.teacherFeedback && " · Feedback added"}
@@ -597,6 +690,7 @@ export default function CheckingCenterPage() {
   const [delayInput, setDelayInput] = useState("2");
   const [savingDelay, setSavingDelay] = useState(false);
   const [declaringResult, setDeclaringResult] = useState(false);
+  const [generatingCards, setGeneratingCards] = useState<3 | 10 | null>(null);
 
   // Load teacher's non-draft tests
   useEffect(() => {
@@ -727,6 +821,32 @@ export default function CheckingCenterPage() {
     }
   }
 
+  async function handleGenerateTopperCards(count: 3 | 10) {
+    if (!selectedTest) return;
+    setGeneratingCards(count);
+    try {
+      const res = await fetch(`/api/cards/topper-zip/${selectedTest.id}?count=${count}`);
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || `Could not generate cards (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `topper-cards-${selectedTest.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Top ${count} rank cards downloaded.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate topper cards.");
+    } finally {
+      setGeneratingCards(null);
+    }
+  }
+
   return (
     <div className="animate-fade-in">
       <PageHeader
@@ -791,6 +911,42 @@ export default function CheckingCenterPage() {
                 </Button>
               </div>
             )}
+          </CardContent>
+
+          <Separator />
+
+          <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                <Trophy className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-800">Shareable rank cards</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Download branded result cards for your top students — great for social posts.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleGenerateTopperCards(3)}
+                disabled={generatingCards !== null}
+              >
+                {generatingCards === 3 && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                Top 3
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleGenerateTopperCards(10)}
+                disabled={generatingCards !== null}
+              >
+                {generatingCards === 10 && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                Top 10
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

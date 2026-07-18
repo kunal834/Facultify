@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import ShareResultCard from "@/components/testing/ShareResultCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -559,6 +560,12 @@ function ActiveTestPageInner() {
                 </p>
               </div>
             </div>
+            {activeSubmission.status === "graded" && (
+              <ShareResultCard
+                submissionId={activeSubmission.id}
+                studentName={activeSubmission.studentName}
+              />
+            )}
           </div>
 
           {/* ── Per-question breakdown ───────────────────────────────────── */}

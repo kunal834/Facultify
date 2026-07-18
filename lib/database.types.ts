@@ -10,11 +10,13 @@ export type DifficultyLevel   = 'easy' | 'medium' | 'hard'
 export type TestStatus        = 'draft' | 'published' | 'active' | 'closed'
 export type SubmissionStatus  = 'not_started' | 'in_progress' | 'submitted' | 'graded'
 export type InvoiceStatus     = 'paid' | 'pending' | 'overdue'
+export type ExamTrack         = 'ssc' | 'upsc' | 'jee' | 'neet' | 'cuet' | 'general'
 
 // ─── Row types (what SELECT returns) ─────────────────────────────────────────
 
 export interface InstitutionRow {
   id: string; name: string; domain: string; admin_email: string; logo_url: string | null
+  primary_color: string; secondary_color: string
   subscription_tier: SubscriptionTier; max_teachers: number; max_students: number
   ai_generations_used: number; ai_generations_limit: number; is_active: boolean
   billing_status: string; dodo_customer_id: string | null; dodo_subscription_id: string | null
@@ -51,6 +53,13 @@ export interface QuestionRow {
   time_limit: number | null; ai_generated: boolean
 }
 export interface QuestionOptionRow { id: string; question_id: string; text: string; is_correct: boolean }
+export interface QuestionBankRow {
+  id: string; institution_id: string | null; created_by_teacher_id: string | null
+  exam_track: ExamTrack; topic: string; subject: string; relevant_date: string | null
+  type: QuestionType; text: string; marks: number; difficulty: DifficultyLevel
+  correct_answer: string | null; explanation: string | null; ai_generated: boolean; created_at: string
+}
+export interface QuestionBankOptionRow { id: string; question_bank_id: string; text: string; is_correct: boolean }
 export interface SubmissionRow {
   id: string; test_id: string; student_id: string; student_name: string; status: SubmissionStatus
   started_at: string | null; submitted_at: string | null; graded_at: string | null
@@ -70,6 +79,7 @@ export interface InvoiceRow {
 
 export interface InstitutionInsert {
   id?: string; name: string; domain: string; admin_email: string; logo_url?: string | null
+  primary_color?: string; secondary_color?: string
   subscription_tier: SubscriptionTier; max_teachers: number; max_students: number
   ai_generations_used?: number; ai_generations_limit?: number; is_active?: boolean
   billing_status?: string; dodo_customer_id?: string | null; dodo_subscription_id?: string | null
@@ -105,6 +115,15 @@ export interface QuestionInsert {
   time_limit?: number | null; ai_generated?: boolean
 }
 export interface QuestionOptionInsert { id?: string; question_id: string; text: string; is_correct?: boolean }
+export interface QuestionBankInsert {
+  id?: string; institution_id?: string | null; created_by_teacher_id?: string | null
+  exam_track?: ExamTrack; topic: string; subject: string; relevant_date?: string | null
+  type: QuestionType; text: string; marks?: number; difficulty?: DifficultyLevel
+  correct_answer?: string | null; explanation?: string | null; ai_generated?: boolean; created_at?: string
+}
+export interface QuestionBankOptionInsert {
+  id?: string; question_bank_id: string; text: string; is_correct?: boolean
+}
 export interface SubmissionInsert {
   id?: string; test_id: string; student_id: string; student_name?: string; status?: SubmissionStatus
   started_at?: string | null; submitted_at?: string | null; graded_at?: string | null
@@ -133,6 +152,8 @@ export interface Database {
       tests:              { Row: TestRow;              Insert: TestInsert;             Update: Partial<TestInsert>             }
       questions:          { Row: QuestionRow;          Insert: QuestionInsert;         Update: Partial<QuestionInsert>         }
       question_options:   { Row: QuestionOptionRow;    Insert: QuestionOptionInsert;   Update: Partial<QuestionOptionInsert>   }
+      question_bank:         { Row: QuestionBankRow;         Insert: QuestionBankInsert;         Update: Partial<QuestionBankInsert>         }
+      question_bank_options: { Row: QuestionBankOptionRow;   Insert: QuestionBankOptionInsert;   Update: Partial<QuestionBankOptionInsert>   }
       submissions:        { Row: SubmissionRow;        Insert: SubmissionInsert;       Update: Partial<SubmissionInsert>       }
       submission_answers: { Row: SubmissionAnswerRow;  Insert: SubmissionAnswerInsert; Update: Partial<SubmissionAnswerInsert> }
       invoices:           { Row: InvoiceRow;           Insert: InvoiceInsert;          Update: Partial<InvoiceInsert>          }
@@ -148,7 +169,7 @@ export interface Database {
     Enums: {
       subscription_tier: SubscriptionTier; user_role: UserRole; question_type: QuestionType
       difficulty_level: DifficultyLevel; test_status: TestStatus
-      submission_status: SubmissionStatus; invoice_status: InvoiceStatus
+      submission_status: SubmissionStatus; invoice_status: InvoiceStatus; exam_track: ExamTrack
     }
   }
 }

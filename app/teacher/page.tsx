@@ -13,14 +13,13 @@ import {
   ArrowRight,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -168,37 +167,40 @@ export default function TeacherDashboard() {
   const teacherName = teacher?.name ?? "Teacher";
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in space-y-6 pb-6">
       {/* ── Header ── */}
-      <PageHeader
-        title={`Welcome back, ${teacherName}!`}
-        subtitle="Here's what's happening across your classes today."
-      >
-        <Button asChild size="sm" variant="outline">
-          <Link href="/teacher/ai-generator">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Generate with AI
-          </Link>
-        </Button>
-        <Button asChild size="sm">
-          <Link href="/teacher/create-test">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Create New Test
-          </Link>
-        </Button>
-      </PageHeader>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-gray-900">Welcome, {teacherName}!</h1>
+          <p className="text-sm text-gray-500 font-medium">Here&apos;s what&apos;s happening across your classes today.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" className="rounded-full">
+            <Link href="/teacher/create-test">
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create Test
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="rounded-full border-gray-200">
+            <Link href="/teacher/ai-generator">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Generate with AI
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       {/* ── Pending grading alert ── */}
       {!loading && analytics && analytics.pendingGrading > 0 && (
-        <Alert className="mb-6 border-amber-200 bg-amber-50">
+        <Alert className="border-amber-200 bg-amber-50 rounded-2xl">
           <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800">
+          <AlertDescription className="text-amber-800 font-medium">
             <strong>{analytics.pendingGrading}</strong>{" "}
             {analytics.pendingGrading === 1 ? "submission is" : "submissions are"} waiting
             for your review.{" "}
             <Link
               href="/teacher/checking"
-              className="font-semibold underline underline-offset-2"
+              className="font-bold underline underline-offset-2 hover:text-amber-900"
             >
               Go to Grading Center →
             </Link>
@@ -206,80 +208,30 @@ export default function TeacherDashboard() {
         </Alert>
       )}
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        {loading ? (
-          <>
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="My Students"
-              value={analytics?.totalStudents ?? 0}
-              subtitle="across all batches"
-              icon={Users}
-              color="blue"
-            />
-            <StatsCard
-              title="Tests Created"
-              value={analytics?.totalTestsCreated ?? 0}
-              subtitle="total tests authored"
-              icon={FileText}
-              color="purple"
-            />
-            <StatsCard
-              title="Pending Grading"
-              value={analytics?.pendingGrading ?? 0}
-              subtitle={
-                analytics?.pendingGrading
-                  ? "action required"
-                  : "all caught up"
-              }
-              icon={CheckSquare}
-              color={
-                analytics && analytics.pendingGrading > 0 ? "orange" : "green"
-              }
-            />
-            <StatsCard
-              title="Avg Class Score"
-              value={`${analytics?.avgClassScore ?? 0}%`}
-              subtitle="across all tests"
-              icon={TrendingUp}
-              color="green"
-              trend={{ value: 5, label: "vs last test" }}
-            />
-          </>
-        )}
-      </div>
-
-      {/* ── Chart + Quick actions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Bar chart — last 5 test avg scores */}
-        <Card className="col-span-1 lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-slate-700">
-              Recent Test Performance
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Average score % across last {analytics?.recentTestScores.length ?? 5} tests
-            </p>
-          </CardHeader>
-          <CardContent>
+      {/* Row 1: Area Chart (Portfolio) + Stats Cards List (Your Assets) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Performance Chart Card */}
+        <Card className="col-span-1 lg:col-span-2 rounded-[2rem] border border-gray-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.015)] p-6 bg-white flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Recent Test Performance</h2>
+              <p className="text-xs font-semibold text-gray-500">Average score % across last {analytics?.recentTestScores.length ?? 0} tests</p>
+            </div>
+          </div>
+          <div className="w-full">
             {analytics ? (
-              <ResponsiveContainer width="100%" height={232}>
-                <BarChart
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart
                   data={analytics.recentTestScores}
                   margin={{ top: 8, right: 8, left: -20, bottom: 5 }}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#f1f5f9"
-                    vertical={false}
-                  />
+                  <defs>
+                    <linearGradient id="teacherScoreColor" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B6FFF" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#3B6FFF" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis
                     dataKey="testTitle"
                     tick={{ fontSize: 10, fill: "#64748b" }}
@@ -294,175 +246,202 @@ export default function TeacherDashboard() {
                     axisLine={false}
                     tickFormatter={(v: number) => `${v}%`}
                   />
-                  <Tooltip
-                    content={<ChartTooltip />}
-                    cursor={{ fill: "#f8fafc" }}
-                  />
-                  <Bar dataKey="avgScore" radius={[4, 4, 0, 0]} maxBarSize={52}>
-                    {analytics.recentTestScores.map((entry) => (
-                      <Cell
-                        key={entry.testTitle}
-                        fill={barFill(entry.avgScore)}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
+                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#3B6FFF", strokeWidth: 1 }} />
+                  <Area type="monotone" dataKey="avgScore" stroke="#3B6FFF" strokeWidth={2.5} fillOpacity={1} fill="url(#teacherScoreColor)" />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[232px] animate-pulse rounded-lg bg-slate-100" />
+              <div className="h-[240px] animate-pulse rounded-2xl bg-slate-100" />
             )}
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Quick actions + top performer */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-slate-700">
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button asChild className="w-full justify-between" variant="default">
-              <Link href="/teacher/create-test">
-                <span className="flex items-center gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  Create New Test
-                </span>
-                <ArrowRight className="h-4 w-4 opacity-60" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              className="w-full justify-between"
-              variant="outline"
-            >
-              <Link href="/teacher/ai-generator">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Generate with AI
-                </span>
-                <ArrowRight className="h-4 w-4 opacity-60" />
-              </Link>
-            </Button>
-
-            {/* Top performer callout */}
-            {analytics?.topPerformer && (
-              <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
-                <p className="text-xs font-medium text-green-600 mb-1">
-                  Top Performer
-                </p>
-                <p className="font-bold text-slate-900 text-sm">
-                  {analytics.topPerformer}
-                </p>
-              </div>
-            )}
-
-            {!analytics && (
-              <>
-                <Pulse className="h-10 w-full rounded-lg" />
-                <Pulse className="h-10 w-full rounded-lg" />
-                <Pulse className="mt-4 h-16 w-full rounded-xl" />
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Recent Tests Table ── */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-semibold text-slate-700">
-            My Recent Tests
-          </CardTitle>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/teacher/tests">View all</Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
+        {/* Stats List Card */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-base font-bold text-gray-900 px-1">Your Metrics</h2>
           {loading ? (
-            <div className="p-6 space-y-3">
-              {[0, 1, 2].map((i) => (
-                <Pulse key={i} className="h-10 w-full rounded" />
-              ))}
-            </div>
-          ) : tests.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              No tests yet.{" "}
-              <Link
-                href="/teacher/create-test"
-                className="font-medium text-blue-600 hover:underline"
-              >
-                Create your first test →
-              </Link>
+            <div className="space-y-4">
+              <StatCardSkeleton />
+              <StatCardSkeleton />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Batch</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Total Marks</TableHead>
-                    <TableHead className="text-right">Attempts</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tests.map((test) => (
-                    <TableRow key={test.id}>
-                      {/* Title + AI badge */}
-                      <TableCell className="max-w-[220px]">
-                        <span className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm text-slate-800 leading-snug">
-                            {test.title}
-                          </span>
-                          {test.aiGenerated && (
-                            <Badge className="bg-purple-100 text-purple-700 border-0 text-[10px] px-1.5 py-0">
-                              AI
-                            </Badge>
-                          )}
-                        </span>
-                      </TableCell>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between p-4 bg-blue-50/40 border border-blue-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-blue-100 flex items-center justify-center shadow-sm">
+                    <Users className="w-5 h-5 text-[#3B6FFF]" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">My Students</p>
+                    <p className="text-xs font-semibold text-gray-500">across all batches</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.totalStudents ?? 0}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-purple-50/40 border border-purple-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-purple-100 flex items-center justify-center shadow-sm">
+                    <FileText className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tests Created</p>
+                    <p className="text-xs font-semibold text-gray-500">total tests authored</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.totalTestsCreated ?? 0}</p>
+                </div>
+              </div>
 
-                      {/* Batch name resolved from batches list */}
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                        {batchName(test.batchId)}
-                      </TableCell>
+              <div className="flex items-center justify-between p-4 bg-orange-50/40 border border-orange-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-orange-100 flex items-center justify-center shadow-sm">
+                    <CheckSquare className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Grading</p>
+                    <p className="text-xs font-semibold text-gray-500">{analytics?.pendingGrading ? "Action required" : "All caught up"}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.pendingGrading ?? 0}</p>
+                </div>
+              </div>
 
-                      {/* Status badge */}
-                      <TableCell>
-                        <StatusBadge status={test.status} />
-                      </TableCell>
-
-                      {/* Total marks */}
-                      <TableCell className="text-right text-sm tabular-nums">
-                        {test.totalMarks}
-                      </TableCell>
-
-                      {/* Attempt count */}
-                      <TableCell className="text-right text-sm tabular-nums">
-                        {test.attemptCount}
-                      </TableCell>
-
-                      {/* Open link */}
-                      <TableCell className="text-right">
-                        <Link
-                          href={`/teacher/tests`}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          Open
-                          <ArrowRight className="h-3 w-3" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="flex items-center justify-between p-4 bg-green-50/40 border border-green-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-green-100 flex items-center justify-center shadow-sm">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Avg Class Score</p>
+                    <p className="text-xs font-semibold text-gray-500">across all tests</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.avgClassScore ?? 0}%</p>
+                </div>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Row 2: Recent Tests Table + Dark AI Promo Banner */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        {/* Recent Tests Table Card */}
+        <Card className="col-span-1 lg:col-span-2 rounded-[2rem] border border-gray-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.015)] p-6 bg-white flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Recent Tests</h2>
+              <p className="text-xs font-semibold text-gray-500">Status of your authored question papers</p>
+            </div>
+            <Button asChild variant="outline" size="sm" className="rounded-full border-gray-200">
+              <Link href="/teacher/tests">View all</Link>
+            </Button>
+          </div>
+
+          <div className="p-0">
+            {loading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <Pulse key={i} className="h-10 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : tests.length === 0 ? (
+              <div className="py-10 text-center text-sm text-slate-400 font-medium">
+                No tests yet.{" "}
+                <Link
+                  href="/teacher/create-test"
+                  className="font-bold text-blue-600 hover:underline"
+                >
+                  Create your first test →
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-hidden border border-gray-100 rounded-2xl bg-gray-50/50">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 hover:bg-gray-50/50 border-b border-gray-100">
+                      <TableHead className="text-gray-500 font-bold text-xs">Title</TableHead>
+                      <TableHead className="text-gray-500 font-bold text-xs">Batch</TableHead>
+                      <TableHead className="text-gray-500 font-bold text-xs">Status</TableHead>
+                      <TableHead className="text-right text-gray-500 font-bold text-xs">Marks</TableHead>
+                      <TableHead className="text-right text-gray-500 font-bold text-xs">Attempts</TableHead>
+                      <TableHead className="text-right text-gray-500 font-bold text-xs pr-4">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="bg-white">
+                    {tests.map((test) => (
+                      <TableRow key={test.id} className="hover:bg-slate-50/30 border-b border-gray-100">
+                        <TableCell className="max-w-[200px] py-3.5">
+                          <span className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-slate-800 leading-snug">
+                              {test.title}
+                            </span>
+                            {test.aiGenerated && (
+                              <Badge className="bg-purple-100 text-purple-700 border-0 text-[10px] px-1.5 py-0 font-bold">
+                                AI
+                              </Badge>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500 whitespace-nowrap">
+                          {batchName(test.batchId)}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={test.status} />
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-medium text-slate-700 tabular-nums">
+                          {test.totalMarks}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-medium text-slate-700 tabular-nums">
+                          {test.attemptCount}
+                        </TableCell>
+                        <TableCell className="text-right pr-4">
+                          <Link
+                            href={`/teacher/tests`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            Open
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* AI Promo Banner (Ad Banner look) */}
+        <div className="rounded-[2rem] border border-slate-900 bg-slate-950 text-white p-6 sm:p-8 flex flex-col justify-between shadow-[0_15px_40px_rgba(0,0,0,0.15)] relative overflow-hidden group min-h-[250px]">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none"
+            style={{ background: "radial-gradient(circle, #3B6FFF 0%, #7C3AED 100%)" }}
+          />
+          <div className="relative z-10 flex flex-col gap-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.1em] bg-blue-600/30 text-blue-400 w-fit">
+              AI Powerpack
+            </span>
+            <h2 className="text-xl font-black leading-tight">Create complete exams in seconds!</h2>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">
+              Create balanced exams tailored to specific chapters, topic bounds, and custom rubrics instantly.
+            </p>
+          </div>
+          <div className="relative z-10 mt-6">
+            <Button asChild className="w-full rounded-full bg-white hover:bg-slate-100 text-slate-950 font-bold py-3.5 hover:shadow-lg transition-all duration-300">
+              <Link href="/teacher/ai-generator">
+                Generate with AI
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

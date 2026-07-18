@@ -19,6 +19,8 @@ function toInstitution(r: Record<string, unknown>): Institution {
     domain:           r.domain as string,
     adminEmail:       r.admin_email as string,
     logoUrl:          (r.logo_url as string) ?? undefined,
+    primaryColor:     (r.primary_color as string) ?? "#3B6FFF",
+    secondaryColor:   (r.secondary_color as string) ?? "#7C3AED",
     subscriptionTier: r.subscription_tier as Institution["subscriptionTier"],
     maxTeachers:      r.max_teachers as number,
     maxStudents:      r.max_students as number,

@@ -12,14 +12,13 @@ import {
   Clock,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -223,101 +222,58 @@ export default function AdminDashboard() {
   }, [institutionId]);
 
   return (
-    <div className="animate-fade-in">
-      <PageHeader
-        title={`Dashboard — ${institutionName}`}
-        subtitle="Overview of your institution's activity and performance"
-      >
-        <Button asChild size="sm">
-          <Link href="/admin/teachers">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Invite Teacher
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/admin/analytics">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            View Analytics
-          </Link>
-        </Button>
-      </PageHeader>
-
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        {loading ? (
-          <>
-            <StatsCardSkeleton />
-            <StatsCardSkeleton />
-            <StatsCardSkeleton />
-            <StatsCardSkeleton />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Active Teachers"
-              value={analytics?.activeTeachers ?? 0}
-              subtitle={`of ${analytics?.totalTeachers ?? "—"} total`}
-              icon={Users}
-              color="blue"
-              trend={analytics?.teachersTrend !== undefined ? { value: analytics.teachersTrend, label: "vs last month" } : undefined}
-            />
-            <StatsCard
-              title="Enrolled Students"
-              value={analytics?.totalStudents ?? 0}
-              subtitle={`${analytics?.activeStudents ?? "—"} active`}
-              icon={GraduationCap}
-              color="green"
-              trend={analytics?.studentsTrend !== undefined ? { value: analytics.studentsTrend, label: "vs last month" } : undefined}
-            />
-            <StatsCard
-              title="Tests Created"
-              value={analytics?.totalTestsCreated ?? 0}
-              subtitle={`${analytics?.testsThisMonth ?? "—"} this month`}
-              icon={FileText}
-              color="purple"
-              trend={analytics?.testsTrend !== undefined ? { value: analytics.testsTrend, label: "vs last month" } : undefined}
-            />
-            <StatsCard
-              title="AI Credits Used"
-              value={`${analytics?.aiGenerationsUsed ?? 0}/${analytics?.aiGenerationsLimit ?? 100}`}
-              subtitle="generations this month"
-              icon={Sparkles}
-              color="orange"
-            />
-          </>
-        )}
+    <div className="animate-fade-in space-y-6 pb-6">
+      {/* Page Header mimicking the Overview title / right widgets */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-gray-900">Overview</h1>
+          <p className="text-sm text-gray-500 font-medium">Institution activity and performance</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" className="rounded-full">
+            <Link href="/admin/teachers">
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Invite Teacher
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="rounded-full border-gray-200">
+            <Link href="/admin/analytics">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Analytics
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* ── Chart + Activity ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar chart */}
-        <Card className="col-span-1 lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-slate-700">
-              Recent Test Performance
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Avg score % across last {chartData.length} tests
-            </p>
-          </CardHeader>
-          <CardContent>
+      {/* Row 1: Area Chart (Portfolio) + Stats Cards List (Your Assets) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Performance Chart Card */}
+        <Card className="col-span-1 lg:col-span-2 rounded-[2rem] border border-gray-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.015)] p-6 bg-white flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Recent Test Performance</h2>
+              <p className="text-xs font-semibold text-gray-500">Average score % across last {chartData.length} tests</p>
+            </div>
+          </div>
+          <div className="w-full">
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart
+              <AreaChart
                 data={chartData}
                 margin={{ top: 8, right: 8, left: -20, bottom: 5 }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                  vertical={false}
-                />
+                <defs>
+                  <linearGradient id="scoreColor" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B6FFF" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#3B6FFF" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis
                   dataKey="testTitle"
                   tick={{ fontSize: 11, fill: "#64748b" }}
                   tickLine={false}
                   axisLine={false}
                   interval={0}
-                  width={80}
                 />
                 <YAxis
                   domain={[0, 100]}
@@ -326,95 +282,160 @@ export default function AdminDashboard() {
                   axisLine={false}
                   tickFormatter={(v: number) => `${v}%`}
                 />
-                <Tooltip
-                  content={<ChartTooltip />}
-                  cursor={{ fill: "#f8fafc" }}
-                />
-                <Bar dataKey="avgScore" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                  {chartData.map((entry) => (
-                    <Cell
-                      key={entry.testTitle}
-                      fill={barFill(entry.avgScore)}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#3B6FFF", strokeWidth: 1 }} />
+                <Area type="monotone" dataKey="avgScore" stroke="#3B6FFF" strokeWidth={2.5} fillOpacity={1} fill="url(#scoreColor)" />
+              </AreaChart>
             </ResponsiveContainer>
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Activity feed */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-slate-700">
-              Recent Activity
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">Last 5 events</p>
-          </CardHeader>
-          <CardContent>
+        {/* Stats List Card */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-base font-bold text-gray-900 px-1">Your Metrics</h2>
+          {loading ? (
+            <div className="space-y-4">
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between p-4 bg-blue-50/40 border border-blue-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-blue-100 flex items-center justify-center shadow-sm">
+                    <Users className="w-5 h-5 text-[#3B6FFF]" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Active Teachers</p>
+                    <p className="text-xs font-semibold text-gray-500">of {analytics?.totalTeachers ?? "—"} total</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.activeTeachers ?? 0}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-green-50/40 border border-green-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-green-100 flex items-center justify-center shadow-sm">
+                    <GraduationCap className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Enrolled Students</p>
+                    <p className="text-xs font-semibold text-gray-500">{analytics?.activeStudents ?? "—"} active</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.totalStudents ?? 0}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-purple-50/40 border border-purple-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-purple-100 flex items-center justify-center shadow-sm">
+                    <FileText className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tests Created</p>
+                    <p className="text-xs font-semibold text-gray-500">{analytics?.testsThisMonth ?? "—"} this month</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900">{analytics?.totalTestsCreated ?? 0}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-orange-50/40 border border-orange-100/60 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-orange-100 flex items-center justify-center shadow-sm">
+                    <Sparkles className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">AI Credits Used</p>
+                    <p className="text-xs font-semibold text-gray-550 truncate max-w-[120px]">generations this month</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-900 truncate max-w-[80px]">{analytics?.aiGenerationsUsed ?? 0}/{analytics?.aiGenerationsLimit ?? 100}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Recent Activity (Market List) + Dark Invite Banner (Earn Banner) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        {/* Recent Activity (Market list look) */}
+        <Card className="col-span-1 lg:col-span-2 rounded-[2rem] border border-gray-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.015)] p-6 bg-white">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Recent Activity</h2>
+              <p className="text-xs font-semibold text-gray-500">Latest 5 events at your institution</p>
+            </div>
             {loading ? (
               <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex gap-3">
-                    <div className="flex flex-col items-center gap-1 pt-1 flex-shrink-0">
-                      <div className="h-2 w-2 rounded-full bg-slate-200 animate-pulse" />
-                      {i < 5 && <div className="w-px flex-1 bg-slate-100 min-h-[12px]" />}
-                    </div>
-                    <div className="pb-2 space-y-1.5 flex-1">
-                      <div className="h-3 bg-slate-200 rounded animate-pulse w-4/5" />
-                      <div className="h-3 bg-slate-100 rounded animate-pulse w-1/3" />
-                    </div>
-                  </div>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-10 bg-slate-100 rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : activity.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No activity yet. Actions like adding teachers, enrolling students, and creating tests will appear here.
-              </p>
+              <p className="text-sm text-gray-400 text-center py-6 font-medium">No activity recorded yet.</p>
             ) : (
-              <ul className="space-y-4">
-                {activity.map((item, i) => (
-                  <li key={i} className="flex gap-3 text-sm">
-                    <div className="flex flex-col items-center gap-1 flex-shrink-0 pt-1">
-                      <span
-                        className={cn(
-                          "h-2 w-2 rounded-full flex-shrink-0",
-                          ACTIVITY_DOT_COLOR[item.type] ?? "bg-slate-400"
-                        )}
-                      />
-                      {i < activity.length - 1 && (
-                        <span className="w-px flex-1 bg-slate-100 min-h-[12px]" />
-                      )}
-                    </div>
-                    <div className="pb-2">
-                      <p className="text-slate-700 leading-snug">{item.text}</p>
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <Clock className="h-3 w-3" />
-                        {item.time}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <div className="overflow-hidden border border-gray-100 rounded-2xl bg-gray-50/50">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50 text-gray-500 font-semibold text-xs">
+                      <th className="p-3 pl-4">Type</th>
+                      <th className="p-3">Event Description</th>
+                      <th className="p-3 text-right pr-4">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {activity.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="p-3 pl-4">
+                          <span className={cn("inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold capitalize", 
+                            item.type === "test" && "bg-blue-50 text-blue-700",
+                            item.type === "student" && "bg-green-50 text-green-700",
+                            item.type === "teacher" && "bg-purple-50 text-purple-700",
+                            item.type === "billing" && "bg-orange-50 text-orange-700"
+                          )}>
+                            {item.type}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-700 font-medium">{item.text}</td>
+                        <td className="p-3 text-right text-gray-400 text-xs pr-4">{item.time}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </CardContent>
+          </div>
         </Card>
-      </div>
 
-      {/* ── Quick actions ── */}
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/teachers">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Invite Teacher
-          </Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/analytics">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            View Analytics
-          </Link>
-        </Button>
+        {/* Invite Banner (Ad Banner look) */}
+        <div className="rounded-[2rem] border border-slate-900 bg-slate-950 text-white p-6 sm:p-8 flex flex-col justify-between shadow-[0_15px_40px_rgba(0,0,0,0.15)] relative overflow-hidden group min-h-[250px]">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none"
+            style={{ background: "radial-gradient(circle, #3B6FFF 0%, #7C3AED 100%)" }}
+          />
+          <div className="relative z-10 flex flex-col gap-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-[0.1em] bg-blue-600/30 text-blue-400 w-fit">
+              Grow Your Team
+            </span>
+            <h2 className="text-xl font-black leading-tight">Bring your whole Faculty in minutes!</h2>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">
+              Invite teachers via dashboard, assign departments, configure roles, and watch AI speed up grading workloads.
+            </p>
+          </div>
+          <div className="relative z-10 mt-6">
+            <Button asChild className="w-full rounded-full bg-white hover:bg-slate-100 text-slate-950 font-bold py-3.5 hover:shadow-lg transition-all duration-300">
+              <Link href="/admin/teachers">
+                Invite Faculty
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

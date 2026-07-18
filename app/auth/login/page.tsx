@@ -37,7 +37,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(error.message || "Invalid email or password. Please try again.");
       setLoading(false);
       return;
     }
@@ -45,6 +45,10 @@ export default function LoginPage() {
     await initSession();
     const session = useAppStore.getState().activeSession;
     if (!session) { router.push("/onboard"); return; }
+    // Route directly to role-specific dashboard
+    if (session.role === "admin")   { router.push("/admin");   return; }
+    if (session.role === "teacher") { router.push("/teacher"); return; }
+    if (session.role === "student") { router.push("/student"); return; }
     router.push("/dashboard");
   }
 

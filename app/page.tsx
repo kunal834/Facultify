@@ -2,8 +2,8 @@
 
 import MarketingNav from "@/components/marketing/MarketingNav";
 import Hero from "@/components/marketing/Hero";
-import Features from "@/components/marketing/Features";
-import Pricing from "@/components/marketing/Pricing";
+import ValueProps from "@/components/marketing/ValueProps";
+import CommunityCTA from "@/components/marketing/CommunityCTA";
 import Footer from "@/components/marketing/Footer";
 
 export default function LandingPage() {
@@ -11,8 +11,8 @@ export default function LandingPage() {
     <main>
       <MarketingNav />
       <Hero />
-      <Features />
-      <Pricing />
+      <ValueProps />
+      <CommunityCTA />
       <Footer />
     </main>
   );

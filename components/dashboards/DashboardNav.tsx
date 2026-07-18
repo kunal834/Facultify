@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 
 const ROLE_BADGE: Record<UserRole, { label: string; color: string }> = {
@@ -53,22 +54,20 @@ export default function DashboardNav() {
   }
 
   return (
-    <header className="w-full h-16 bg-slate-900 text-white flex items-center justify-between px-6 shadow-md shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2">
-        <Logo size={32} />
-      </div>
+    <header className="w-full h-16 bg-white text-gray-850 flex items-center justify-between px-8 border-b border-gray-100/50 shrink-0">
+      {/* Spacer to push controls to the right */}
+      <div className="flex items-center gap-2" />
 
       {/* Right section */}
       <div className="flex items-center gap-4">
         {/* Role badge */}
-        <Badge className={badge.color}>{badge.label}</Badge>
+        <Badge className={cn("rounded-full px-3 py-1 font-semibold", badge.color)}>{badge.label}</Badge>
 
         {/* Notifications */}
         <Button
           variant="ghost"
           size="icon"
-          className="text-slate-300 hover:text-white hover:bg-slate-800 relative"
+          className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 relative rounded-full"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
@@ -78,13 +77,13 @@ export default function DashboardNav() {
         {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full ring-2 ring-slate-700 hover:ring-blue-400 transition-all focus:outline-none">
+            <button className="flex items-center gap-2 rounded-full ring-2 ring-slate-100 hover:ring-[#3B6FFF]/30 transition-all focus:outline-none p-0.5">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-slate-700 text-slate-200 text-sm font-semibold">
+                <AvatarFallback className="bg-slate-100 text-slate-700 text-sm font-semibold">
                   {getInitials(userName)}
                 </AvatarFallback>
               </Avatar>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400 mr-1" />
+              <ChevronDown className="h-3.5 w-3.5 text-slate-500 mr-1" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

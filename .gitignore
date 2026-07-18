@@ -37,3 +37,17 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI Agent / IDE files (not part of the app)
+.agents/
+.claude/
+.mcp.json
+skills-lock.json
+
+# Test seed scripts (contain credentials, run locally only)
+supabase/seed-test.sql
+scripts/seed-test-users.mjs
+
+# Generated screenshots / images from AI tools
+public/*.png
+public/*.webp

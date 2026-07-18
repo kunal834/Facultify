@@ -14,6 +14,8 @@ const createClient = () =>
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+
+export const getSupabaseBrowserClient = () => createClient()
 import type {
   Institution,
   Teacher,
@@ -21,6 +23,9 @@ import type {
   Batch,
   MockTest,
   Question,
+  BankQuestion,
+  BankQuestionFilters,
+  CreateBankQuestionData,
   Submission,
   SubmissionAnswer,
   Invoice,
@@ -29,6 +34,9 @@ import type {
   StudentAnalytics,
   OnboardFormData,
   AIGeneratorConfig,
+  ExamTrack,
+  BattleSession,
+  BattleLog,
 } from '@/lib/types'
 
 // ─── Plan limits ──────────────────────────────────────────────────────────────
@@ -49,6 +57,8 @@ function toInstitution(row: Record<string, unknown>): Institution {
     domain:           row.domain as string,
     adminEmail:       row.admin_email as string,
     logoUrl:          (row.logo_url as string) ?? undefined,
+    primaryColor:     (row.primary_color as string) ?? '#3B6FFF',
+    secondaryColor:   (row.secondary_color as string) ?? '#7C3AED',
     subscriptionTier: row.subscription_tier as Institution['subscriptionTier'],
     maxTeachers:      row.max_teachers as number,
     maxStudents:      row.max_students as number,
@@ -56,6 +66,7 @@ function toInstitution(row: Record<string, unknown>): Institution {
     isActive:         row.is_active as boolean,
     billingStatus:    (row.billing_status as Institution['billingStatus']) ?? 'free',
     currentPeriodEnd: (row.current_period_end as string) ?? undefined,
+    examTracks:       (row.exam_tracks as ExamTrack[]) ?? ['general'],
   }
 }
 
@@ -88,6 +99,7 @@ function toStudent(row: Record<string, unknown>): Student {
     enrolledAt:     row.enrolled_at as string,
     overallScore:   (row.overall_score as number) ?? 0,
     testsAttempted: (row.tests_attempted as number) ?? 0,
+    examTrack:      (row.exam_track as ExamTrack) ?? 'general',
   }
 }
 
@@ -100,6 +112,7 @@ function toBatch(row: Record<string, unknown>): Batch {
     subject:       row.subject as string,
     studentCount:  (row.student_count as number) ?? 0,
     createdAt:     row.created_at as string,
+    examTrack:     (row.exam_track as ExamTrack) ?? 'general',
   }
 }
 
@@ -122,6 +135,32 @@ function toQuestion(row: Record<string, unknown>): Question {
     explanation:   (row.explanation as string) ?? undefined,
     timeLimit:     (row.time_limit as number) ?? undefined,
     aiGenerated:   row.ai_generated as boolean,
+  }
+}
+
+function toBankQuestion(row: Record<string, unknown>): BankQuestion {
+  const rawOpts = (row.question_bank_options as Record<string, unknown>[] | null) ?? []
+  return {
+    id:                 row.id as string,
+    institutionId:      (row.institution_id as string) ?? undefined,
+    createdByTeacherId: (row.created_by_teacher_id as string) ?? undefined,
+    examTrack:          row.exam_track as BankQuestion['examTrack'],
+    topic:              row.topic as string,
+    subject:            row.subject as string,
+    relevantDate:       (row.relevant_date as string) ?? undefined,
+    type:               row.type as BankQuestion['type'],
+    text:               row.text as string,
+    marks:              row.marks as number,
+    difficulty:         row.difficulty as BankQuestion['difficulty'],
+    options:            rawOpts.map(o => ({
+      id:        o.id as string,
+      text:      o.text as string,
+      isCorrect: o.is_correct as boolean,
+    })),
+    correctAnswer:      (row.correct_answer as string) ?? undefined,
+    explanation:        (row.explanation as string) ?? undefined,
+    aiGenerated:        row.ai_generated as boolean,
+    createdAt:          row.created_at as string,
   }
 }
 
@@ -285,21 +324,44 @@ export async function onboardInstitution(data: OnboardFormData): Promise<Institu
 
 export async function updateInstitution(
   id: string,
-  patch: Partial<Pick<Institution, 'name' | 'domain' | 'logoUrl'>>
+  patch: Partial<Pick<Institution, 'name' | 'domain' | 'adminEmail' | 'logoUrl' | 'primaryColor' | 'secondaryColor' | 'examTracks'>>
 ): Promise<Institution> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('institutions')
     .update({
-      ...(patch.name    !== undefined && { name:     patch.name }),
-      ...(patch.domain  !== undefined && { domain:   patch.domain }),
-      ...(patch.logoUrl !== undefined && { logo_url: patch.logoUrl }),
+      ...(patch.name          !== undefined && { name:            patch.name }),
+      ...(patch.domain        !== undefined && { domain:          patch.domain }),
+      ...(patch.adminEmail    !== undefined && { admin_email:     patch.adminEmail }),
+      ...(patch.logoUrl       !== undefined && { logo_url:        patch.logoUrl }),
+      ...(patch.primaryColor  !== undefined && { primary_color:   patch.primaryColor }),
+      ...(patch.secondaryColor !== undefined && { secondary_color: patch.secondaryColor }),
+      ...(patch.examTracks    !== undefined && { exam_tracks:     patch.examTracks }),
     })
     .eq('id', id)
     .select()
     .single()
   if (error) throw error
   return toInstitution(data as Record<string, unknown>)
+}
+
+// Uploads a logo to the public `institution-assets` bucket at a stable path
+// (so re-uploading replaces the old file instead of accumulating orphans),
+// then persists the resulting public URL onto the institution row.
+export async function uploadInstitutionLogo(institutionId: string, file: File): Promise<Institution> {
+  const supabase = createClient()
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
+  const path = `${institutionId}/logo.${ext}`
+
+  const { error: uploadErr } = await supabase.storage
+    .from('institution-assets')
+    .upload(path, file, { upsert: true, contentType: file.type })
+  if (uploadErr) throw uploadErr
+
+  const { data: { publicUrl } } = supabase.storage.from('institution-assets').getPublicUrl(path)
+
+  // Cache-bust so the new logo shows immediately even though the path is stable.
+  return updateInstitution(institutionId, { logoUrl: `${publicUrl}?v=${Date.now()}` })
 }
 
 // ─── Teacher Services ─────────────────────────────────────────────────────────
@@ -452,6 +514,7 @@ export async function createBatch(
       institution_id: data.institutionId,
       name:           data.name,
       subject:        data.subject,
+      exam_track:     data.examTrack || 'general',
     })
     .select()
     .single()
@@ -592,6 +655,118 @@ export async function addQuestionToTest(
     .single()
 
   return toQuestion(fullQ as Record<string, unknown>)
+}
+
+// ─── Question Bank ────────────────────────────────────────────────────────────
+// Reusable, taggable questions independent of any test. RLS already scopes
+// `select` to platform-wide (institution_id is null) + the caller's own
+// institution, so no manual institution filter is required here — but we
+// still narrow explicitly where useful for clearer intent at the call site.
+
+export async function getBankQuestions(
+  institutionId: string,
+  filters: BankQuestionFilters = {}
+): Promise<BankQuestion[]> {
+  const supabase = createClient()
+  let query = supabase
+    .from('question_bank')
+    .select('*, question_bank_options(*)')
+    .order('created_at', { ascending: false })
+
+  query = filters.includesPlatformWide === false
+    ? query.eq('institution_id', institutionId)
+    : query.or(`institution_id.eq.${institutionId},institution_id.is.null`)
+
+  if (filters.examTrack) query = query.eq('exam_track', filters.examTrack)
+  if (filters.topic) query = query.eq('topic', filters.topic)
+  if (filters.subject) query = query.eq('subject', filters.subject)
+  if (filters.relevantDate) query = query.eq('relevant_date', filters.relevantDate)
+
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []).map(row => toBankQuestion(row as Record<string, unknown>))
+}
+
+export async function createBankQuestion(
+  institutionId: string,
+  teacherId: string,
+  data: CreateBankQuestionData
+): Promise<BankQuestion> {
+  const supabase = createClient()
+  const { data: q, error: qErr } = await supabase
+    .from('question_bank')
+    .insert({
+      institution_id:        institutionId,
+      created_by_teacher_id: teacherId,
+      exam_track:            data.examTrack,
+      topic:                 data.topic,
+      subject:               data.subject,
+      relevant_date:         data.relevantDate ?? null,
+      type:                  data.type,
+      text:                  data.text,
+      marks:                 data.marks,
+      difficulty:            data.difficulty,
+      correct_answer:        data.correctAnswer ?? null,
+      explanation:           data.explanation ?? null,
+      ai_generated:          false,
+    })
+    .select()
+    .single()
+  if (qErr) throw qErr
+
+  if (data.options?.length) {
+    const { error: optErr } = await supabase
+      .from('question_bank_options')
+      .insert(
+        data.options.map(opt => ({
+          question_bank_id: q.id,
+          text:             opt.text,
+          is_correct:       opt.isCorrect,
+        }))
+      )
+    if (optErr) throw optErr
+  }
+
+  const { data: fullQ, error: fetchErr } = await supabase
+    .from('question_bank')
+    .select('*, question_bank_options(*)')
+    .eq('id', q.id)
+    .single()
+  if (fetchErr) throw fetchErr
+  return toBankQuestion(fullQ as Record<string, unknown>)
+}
+
+export async function deleteBankQuestion(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('question_bank').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Copies bank questions into a test's own `questions`/`question_options` rows
+// — a one-time "materialize" so the test keeps a frozen copy at creation
+// time, and grading/submissions never need to know the bank exists. Reuses
+// addQuestionToTest so the total_marks bump and insert shape stay identical
+// to the manual test-authoring path.
+export async function materializeBankQuestions(
+  testId: string,
+  bankQuestions: BankQuestion[]
+): Promise<Question[]> {
+  const created: Question[] = []
+  for (const [i, bq] of bankQuestions.entries()) {
+    const question = await addQuestionToTest(testId, {
+      order:         i + 1,
+      type:          bq.type,
+      text:          bq.text,
+      marks:         bq.marks,
+      difficulty:    bq.difficulty,
+      options:       bq.options,
+      correctAnswer: bq.correctAnswer,
+      explanation:   bq.explanation,
+      aiGenerated:   bq.aiGenerated,
+    })
+    created.push(question)
+  }
+  return created
 }
 
 export async function publishTest(testId: string): Promise<MockTest> {
@@ -1088,4 +1263,121 @@ export async function getStudentAnalytics(studentId: string): Promise<StudentAna
     scoreHistory,
     subjectBreakdown,
   }
+}
+
+export async function updateStudentExamTrack(
+  studentId: string,
+  examTrack: ExamTrack
+): Promise<Student> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('students')
+    .update({ exam_track: examTrack })
+    .eq('id', studentId)
+    .select()
+    .single()
+  if (error) throw error
+  return toStudent(data as Record<string, unknown>)
+}
+
+function toBattleSession(row: Record<string, unknown>): BattleSession {
+  return {
+    id:             row.id as string,
+    cohortId:       row.cohort_id as string,
+    topic:          row.topic as string,
+    status:         row.status as 'waiting' | 'active' | 'completed',
+    player1Id:      row.player_1_id as string,
+    player2Id:      (row.player_2_id as string) ?? undefined,
+    player1Score:   row.player_1_score as number,
+    player2Score:   row.player_2_score as number,
+    questions:      (row.questions as any[]) ?? [],
+    createdAt:      row.created_at as string,
+  }
+}
+
+export async function createBattleSession(data: {
+  cohortId: string
+  topic: string
+  player1Id: string
+  questions: any[]
+}): Promise<BattleSession> {
+  const supabase = createClient()
+  const { data: res, error } = await supabase
+    .from('battle_sessions')
+    .insert({
+      cohort_id:     data.cohortId,
+      topic:         data.topic,
+      player_1_id:   data.player1Id,
+      questions:     data.questions,
+      status:        'waiting',
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return toBattleSession(res as Record<string, unknown>)
+}
+
+export async function joinBattleSession(
+  battleId: string,
+  player2Id: string
+): Promise<BattleSession> {
+  const supabase = createClient()
+  const { data: res, error } = await supabase
+    .from('battle_sessions')
+    .update({
+      player_2_id: player2Id,
+      status:      'active',
+    })
+    .eq('id', battleId)
+    .select()
+    .single()
+  if (error) throw error
+  return toBattleSession(res as Record<string, unknown>)
+}
+
+export async function getBattleSession(
+  battleId: string
+): Promise<BattleSession | undefined> {
+  const supabase = createClient()
+  const { data: res, error } = await supabase
+    .from('battle_sessions')
+    .select('*')
+    .eq('id', battleId)
+    .single()
+  if (error) return undefined
+  return toBattleSession(res as Record<string, unknown>)
+}
+
+export async function updateBattleScore(
+  battleId: string,
+  playerId: string,
+  isPlayer1: boolean,
+  score: number
+): Promise<void> {
+  const supabase = createClient()
+  const payload = isPlayer1
+    ? { player_1_score: score }
+    : { player_2_score: score }
+  const { error } = await supabase
+    .from('battle_sessions')
+    .update(payload)
+    .eq('id', battleId)
+  if (error) throw error
+}
+
+export async function addBattleLog(
+  log: BattleLog
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('battle_logs')
+    .insert({
+      battle_id:       log.battleId,
+      player_id:       log.playerId,
+      question_index:  log.questionIndex,
+      selected_option: log.selectedOption,
+      is_correct:      log.isCorrect,
+      time_spent_ms:   log.timeSpentMs,
+    })
+  if (error) throw error
 }

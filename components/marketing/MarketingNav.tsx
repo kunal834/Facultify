@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "About", href: "#about" },
+  { label: "Communities", href: "#communities" },
+  { label: "Events", href: "#events" },
+  { label: "About Us", href: "/about" },
 ] as const;
 
 export default function MarketingNav() {
@@ -47,30 +48,31 @@ export default function MarketingNav() {
   }
 
   return (
-    <header
-      className={cn(
-        "fixed top-0 inset-x-0 z-50 transition-all duration-200",
-        scrolled
-          ? "bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm"
-          : "bg-transparent"
-      )}
-    >
+    <header id="top" className="fixed top-0 inset-x-0 z-50 px-4 sm:px-6 lg:px-8">
       <nav
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
+        className={cn(
+          "mx-auto mt-4 max-w-7xl rounded-full border transition-all duration-300 px-6 h-16 flex items-center justify-between gap-4",
+          scrolled
+            ? "bg-white/90 backdrop-blur-md border-gray-200/80 shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
+            : "bg-white/65 backdrop-blur-sm border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+        )}
         aria-label="Main navigation"
       >
-        {/* Logo */}
+        {/* Logo + wordmark */}
         <Link
           href="/"
-          className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-md"
+          className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-md shrink-0"
           aria-label="Facultify home"
         >
-          <Logo size={32} />
+          <Logo size={30} />
+          <span className="text-lg font-black tracking-tight text-slate-900 hidden xs:inline">
+            Facultify
+          </span>
         </Link>
 
-        {/* Desktop nav links */}
+        {/* Desktop nav links — centered */}
         <ul
-          className="hidden md:flex items-center gap-1"
+          className="hidden md:flex items-center gap-1 flex-1 justify-center"
           role="list"
         >
           {NAV_LINKS.map(({ label, href }) => (
@@ -78,7 +80,7 @@ export default function MarketingNav() {
               <a
                 href={href}
                 onClick={(e) => handleAnchorClick(e, href)}
-                className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-full hover:bg-black/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 {label}
               </a>
@@ -87,21 +89,20 @@ export default function MarketingNav() {
         </ul>
 
         {/* Desktop CTA buttons */}
-        <div className="hidden md:flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium"
+        <div className="hidden md:flex items-center gap-2 shrink-0">
+          <Link
+            href="/auth/login"
+            className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <Link href="/auth/login">Log In</Link>
-          </Button>
+            Login
+          </Link>
           <Button
             size="sm"
             asChild
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm"
+            className="rounded-full px-5 font-bold shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            style={{ background: "#0F172A", color: "#fff" }}
           >
-            <Link href="/auth/signup">Get Started</Link>
+            <Link href="/auth/signup">Start for Free →</Link>
           </Button>
         </div>
 
@@ -113,7 +114,7 @@ export default function MarketingNav() {
                 variant="ghost"
                 size="icon"
                 aria-label="Open navigation menu"
-                className="text-slate-700 hover:bg-slate-100"
+                className="text-slate-700 hover:bg-black/5"
               >
                 <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
@@ -128,6 +129,9 @@ export default function MarketingNav() {
                     onClick={() => setMobileOpen(false)}
                   >
                     <Logo size={28} />
+                    <span className="text-base font-black tracking-tight text-slate-900">
+                      Facultify
+                    </span>
                   </Link>
                 </SheetTitle>
               </SheetHeader>
@@ -156,17 +160,18 @@ export default function MarketingNav() {
                 <Button
                   variant="outline"
                   asChild
-                  className="w-full border-slate-300 text-slate-700 font-medium"
+                  className="w-full rounded-full border-slate-300 text-slate-700 font-semibold"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <Link href="/auth/login">Log In</Link>
+                  <Link href="/auth/login">Login</Link>
                 </Button>
                 <Button
                   asChild
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  className="w-full rounded-full font-semibold"
+                  style={{ background: "#0F172A", color: "#fff" }}
                   onClick={() => setMobileOpen(false)}
                 >
-                  <Link href="/auth/signup">Get Started</Link>
+                  <Link href="/auth/signup">Start for Free</Link>
                 </Button>
               </div>
             </SheetContent>
