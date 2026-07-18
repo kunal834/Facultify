@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/dashboards/PageHeader";
 import { useAppStore } from "@/store/app-store";
 import { getInitials } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 export default function StudentProfilePage() {
   const { activeSession } = useAppStore();
@@ -42,9 +43,31 @@ export default function StudentProfilePage() {
       setPwError("Password must be at least 8 characters.");
       return;
     }
+    if (!student) return;
+
     setChangingPw(true);
-    await new Promise((r) => setTimeout(r, 1000));
+    const supabase = createClient();
+
+    // Re-authenticate with the current password before overwriting it —
+    // updateUser() alone would accept any new password without checking it.
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: student.email,
+      password: pwData.current,
+    });
+    if (reauthError) {
+      setChangingPw(false);
+      setPwError("Current password is incorrect.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: pwData.next });
     setChangingPw(false);
+
+    if (error) {
+      setPwError(error.message);
+      return;
+    }
+
     setPwData({ current: "", next: "", confirm: "" });
     toast.success("Password changed successfully.");
   }
