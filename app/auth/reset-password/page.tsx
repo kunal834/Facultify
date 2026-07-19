@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Eye, EyeOff, KeyRound } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +27,12 @@ function ResetPasswordForm() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const ranRef = useRef(false);
+
   useEffect(() => {
+    if (ranRef.current) return;
+    ranRef.current = true;
+
     (async () => {
       const supabase = createClient();
       const params = new URLSearchParams(window.location.search);
@@ -36,6 +41,7 @@ function ResetPasswordForm() {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
+          console.error("exchangeCodeForSession failed:", error.status, error.code, error.message);
           setLinkError("This password reset link has expired or has already been used. Please request a new one.");
         } else {
           setSessionReady(true);
