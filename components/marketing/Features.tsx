@@ -1,5 +1,6 @@
-import { Sparkles, Zap, BarChart3, Users, GraduationCap, BookOpen } from "lucide-react";
+import { Sparkles, Zap, BarChart3, Users, GraduationCap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import Reveal from "@/components/marketing/Reveal";
 
 // ---------------------------------------------------------------------------
 // Feature data — each card has a palette token so the accent is purposeful,
@@ -62,16 +63,6 @@ const FEATURES = [
     iconColor: "#E11D48",
     borderAccent: "#E11D48",
     shadowColor: "rgba(225,29,72,0.12)",
-  },
-  {
-    icon: BookOpen,
-    title: "Question Bank",
-    description:
-      "Tag, search, and reuse questions across tests and semesters. Build an institutional knowledge base over time so good questions compound, rather than getting rewritten from scratch each year.",
-    iconBg: "linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%)",
-    iconColor: "#0D9488",
-    borderAccent: "#0D9488",
-    shadowColor: "rgba(13,148,136,0.12)",
   },
 ] as const;
 
@@ -212,8 +203,10 @@ export default function Features() {
 
         {/* Feature grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
-          {FEATURES.map((feature) => (
-            <FeatureCard key={feature.title} feature={feature} />
+          {FEATURES.map((feature, i) => (
+            <Reveal key={feature.title} delay={i * 60}>
+              <FeatureCard feature={feature} />
+            </Reveal>
           ))}
         </div>
       </div>

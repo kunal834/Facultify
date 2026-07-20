@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { SUBSCRIPTION_PLANS } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
+import Reveal from "@/components/marketing/Reveal";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -319,13 +320,14 @@ export default function Pricing() {
 
         {/* Cards grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 items-start md:items-stretch">
-          {SUBSCRIPTION_PLANS.map((plan) => (
-            <PricingCard
-              key={plan.tier}
-              plan={plan}
-              annual={annual}
-              popular={plan.tier === "institution"}
-            />
+          {SUBSCRIPTION_PLANS.map((plan, i) => (
+            <Reveal key={plan.tier} delay={i * 60} className="h-full">
+              <PricingCard
+                plan={plan}
+                annual={annual}
+                popular={plan.tier === "institution"}
+              />
+            </Reveal>
           ))}
         </div>
 
