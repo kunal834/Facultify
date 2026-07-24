@@ -21,7 +21,27 @@ const config: Config = {
       screens: {
         xs: "420px",
       },
+      fontFamily: {
+        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        serif: ["var(--font-display)", "ui-serif", "Georgia", "serif"],
+      },
       colors: {
+        ink: {
+          DEFAULT: "#0B1220",
+          muted: "#475569",
+          soft: "#64748B",
+          faint: "#94A3B8",
+        },
+        brand: {
+          50: "#EFF3FF",
+          100: "#DEE6FF",
+          200: "#BCCCFF",
+          400: "#6E86E8",
+          500: "#3C57C9",
+          600: "#2E46AD",
+          700: "#243890",
+          900: "#131E42",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -52,7 +52,7 @@ function PricingCard({ plan, annual, popular }: PricingCardProps) {
         className={[
           "flex flex-col h-full rounded-2xl transition-all duration-300",
           popular
-            ? "border-2 border-blue-500 shadow-lg shadow-blue-500/15 bg-white"
+            ? "border-2 border-brand-500 shadow-[0_20px_44px_-20px_rgba(46,70,173,0.35)] bg-white"
             : "border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-100",
         ].join(" ")}
       >
@@ -60,10 +60,7 @@ function PricingCard({ plan, annual, popular }: PricingCardProps) {
         {popular && (
           <div
             aria-hidden="true"
-            className="absolute top-0 inset-x-0 h-[3px] rounded-t-2xl"
-            style={{
-              background: "linear-gradient(90deg, #3B6FFF 0%, #7C3AED 100%)",
-            }}
+            className="absolute top-0 inset-x-0 h-[3px] rounded-t-2xl bg-brand-500"
           />
         )}
 
@@ -71,19 +68,15 @@ function PricingCard({ plan, annual, popular }: PricingCardProps) {
           {/* Tier name + popular badge */}
           <div className="flex items-center justify-between gap-3 mb-5">
             <h3
-              className="text-base font-bold uppercase tracking-[0.12em]"
-              style={{ color: popular ? "#3B6FFF" : "#64748B" }}
+              className={
+                "text-base font-bold uppercase tracking-[0.12em] " +
+                (popular ? "text-brand-600" : "text-ink-soft")
+              }
             >
               {plan.name}
             </h3>
             {popular && (
-              <Badge
-                className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border-0"
-                style={{
-                  background: "linear-gradient(135deg, #3B6FFF 0%, #7C3AED 100%)",
-                  color: "#fff",
-                }}
-              >
+              <Badge className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border-0 bg-brand-600 text-white">
                 Most Popular
               </Badge>
             )}
@@ -91,10 +84,7 @@ function PricingCard({ plan, annual, popular }: PricingCardProps) {
 
           {/* Price block */}
           <div className="flex items-end gap-1.5 mb-1">
-            <span
-              className="text-5xl font-black tabular-nums leading-none tracking-[-0.04em] transition-all duration-300"
-              style={{ color: "#0F172A" }}
-            >
+            <span className="text-5xl font-semibold tabular-nums leading-none tracking-[-0.03em] text-ink transition-all duration-300">
               {formatCurrency(displayedPrice)}
             </span>
             <span className="text-sm text-slate-500 font-medium mb-1.5 leading-none">
@@ -141,26 +131,18 @@ function PricingCard({ plan, annual, popular }: PricingCardProps) {
             {plan.features.map((feature) => (
               <li key={feature} className="flex items-start gap-3">
                 <span
-                  className="shrink-0 mt-[1px] w-4.5 h-4.5 rounded-full flex items-center justify-center"
-                  style={{
-                    background: popular
-                      ? "linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)"
-                      : "rgba(15,23,42,0.05)",
-                  }}
+                  className={
+                    "shrink-0 mt-[1px] w-4.5 h-4.5 rounded-full flex items-center justify-center " +
+                    (popular ? "bg-brand-50" : "bg-slate-100")
+                  }
                   aria-hidden="true"
                 >
                   <Check
-                    className="w-3 h-3"
+                    className={"w-3 h-3 " + (popular ? "text-brand-600" : "text-ink-soft")}
                     strokeWidth={2.5}
-                    style={{ color: popular ? "#3B6FFF" : "#64748B" }}
                   />
                 </span>
-                <span
-                  className="text-sm leading-snug"
-                  style={{ color: "#334155" }}
-                >
-                  {feature}
-                </span>
+                <span className="text-sm leading-snug text-slate-700">{feature}</span>
               </li>
             ))}
           </ul>
@@ -171,17 +153,9 @@ function PricingCard({ plan, annual, popular }: PricingCardProps) {
             className={[
               "w-full h-11 rounded-xl text-sm font-bold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-2",
               popular
-                ? "text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5"
+                ? "bg-brand-600 text-white shadow-[0_10px_24px_-8px_rgba(46,70,173,0.4)] hover:bg-brand-700 hover:shadow-[0_14px_30px_-8px_rgba(46,70,173,0.45)] hover:-translate-y-0.5"
                 : "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-300",
             ].join(" ")}
-            style={
-              popular
-                ? {
-                    background:
-                      "linear-gradient(135deg, #3B6FFF 0%, #5B4DFF 100%)",
-                  }
-                : {}
-            }
           >
             <Link href="/onboard">Get Started</Link>
           </Button>
@@ -216,52 +190,18 @@ export default function Pricing() {
 
         {/* Section header */}
         <div className="max-w-2xl mx-auto text-center mb-14">
-          {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2 mb-5">
-            <span
-              className="block w-5 h-px"
-              style={{
-                background: "linear-gradient(90deg, transparent, #3B6FFF)",
-              }}
-              aria-hidden="true"
-            />
-            <span
-              className="text-xs font-bold uppercase tracking-[0.16em]"
-              style={{ color: "#3B6FFF" }}
-            >
-              Simple pricing
-            </span>
-            <span
-              className="block w-5 h-px"
-              style={{
-                background: "linear-gradient(90deg, #3B6FFF, transparent)",
-              }}
-              aria-hidden="true"
-            />
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600 mb-4">
+            Simple pricing
+          </p>
 
           <h2
             id="pricing-heading"
-            className="text-4xl sm:text-5xl font-black leading-[1.08] tracking-[-0.03em]"
-            style={{ color: "#0F172A" }}
+            className="text-4xl sm:text-5xl font-semibold leading-[1.1] tracking-[-0.02em] text-ink"
           >
-            One plan for every{" "}
-            <span
-              className="bg-clip-text text-transparent"
-              style={{
-                backgroundImage:
-                  "linear-gradient(135deg, #3B6FFF 0%, #7C3AED 100%)",
-                WebkitBackgroundClip: "text",
-              }}
-            >
-              institution
-            </span>
+            One plan for every <span className="font-serif italic font-normal text-brand-600">institution</span>
           </h2>
 
-          <p
-            className="mt-5 text-lg leading-relaxed"
-            style={{ color: "#475569" }}
-          >
+          <p className="mt-5 text-lg leading-relaxed text-ink-muted">
             Scale from a small coaching centre to a university network.
             Every plan includes AI generation, instant grading, and full analytics.
           </p>
@@ -275,7 +215,7 @@ export default function Pricing() {
             <button
               onClick={() => setAnnual(false)}
               className={[
-                "text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-sm",
+                "text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-sm",
                 !annual ? "text-slate-900" : "text-slate-400",
               ].join(" ")}
               aria-pressed={!annual}
@@ -287,13 +227,13 @@ export default function Pricing() {
               checked={annual}
               onCheckedChange={setAnnual}
               aria-label="Toggle annual billing"
-              className="data-[state=checked]:bg-blue-600"
+              className="data-[state=checked]:bg-brand-600"
             />
 
             <button
               onClick={() => setAnnual(true)}
               className={[
-                "text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-sm",
+                "text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-sm",
                 annual ? "text-slate-900" : "text-slate-400",
               ].join(" ")}
               aria-pressed={annual}
@@ -302,14 +242,10 @@ export default function Pricing() {
             </button>
 
             <span
-              className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full ml-0.5"
-              style={{
-                background: annual
-                  ? "rgba(5,150,105,0.10)"
-                  : "rgba(15,23,42,0.05)",
-                color: annual ? "#059669" : "#94A3B8",
-                transition: "background 0.2s, color 0.2s",
-              }}
+              className={
+                "inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full ml-0.5 transition-colors duration-200 " +
+                (annual ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-ink-faint")
+              }
               aria-live="polite"
               aria-label={annual ? "2 months free with annual billing" : " No discount with monthly billing"}
             > 
@@ -343,18 +279,8 @@ export default function Pricing() {
             "99.9% uptime SLA",
           ].map((item) => (
             <div key={item} className="flex items-center gap-1.5">
-              <Check
-                className="w-3.5 h-3.5 shrink-0"
-                strokeWidth={2.5}
-                style={{ color: "#3B6FFF" }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-sm font-medium"
-                style={{ color: "#64748B" }}
-              >
-                {item}
-              </span>
+              <Check className="w-3.5 h-3.5 shrink-0 text-brand-600" strokeWidth={2.5} aria-hidden="true" />
+              <span className="text-sm font-medium text-ink-soft">{item}</span>
             </div>
           ))}
         </div>

@@ -72,4 +72,17 @@
   body {
     @apply bg-background text-foreground;
   }
+  ::selection {
+    background: #DEE6FF;
+    color: #131E42;
+  }
+}
+
+@layer utilities {
+  .bg-grid-faint {
+    background-image:
+      linear-gradient(to right, rgba(11, 18, 32, 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(11, 18, 32, 0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
 }

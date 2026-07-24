@@ -63,7 +63,7 @@ export default function MarketingNav() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-md"
+          className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 rounded-md"
           aria-label="Facultify home"
         >
           <Logo size={32} />
@@ -79,7 +79,7 @@ export default function MarketingNav() {
               <a
                 href={href}
                 onClick={(e) => handleAnchorClick(e, href)}
-                className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               >
                 {label}
               </a>
@@ -100,7 +100,7 @@ export default function MarketingNav() {
           <Button
             size="sm"
             asChild
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm"
+            className="bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm"
           >
             <Link href="/auth/signup">Get Started</Link>
           </Button>
@@ -142,7 +142,7 @@ export default function MarketingNav() {
                         <a
                           href={href}
                           onClick={(e) => handleAnchorClick(e, href)}
-                          className="flex items-center px-3 py-2.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                          className="flex items-center px-3 py-2.5 text-sm font-medium text-slate-700 hover:text-slate-900 rounded-md hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                         >
                           {label}
                         </a>
@@ -164,7 +164,7 @@ export default function MarketingNav() {
                 </Button>
                 <Button
                   asChild
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium"
                   onClick={() => setMobileOpen(false)}
                 >
                   <Link href="/auth/signup">Get Started</Link>

@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Play, ArrowRight } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 // ---------------------------------------------------------------------------
 // Animated grading demo — the product's core loop shown, not described
 // ---------------------------------------------------------------------------
 
 const QUESTIONS = [
-  { label: "Q1", text: "Which theorem proves √2 is irrational?", correct: "B", choices: ["A", "B", "C", "D"] },
-  { label: "Q2", text: "Define a recursive function.", correct: "A", choices: ["A", "B", "C", "D"] },
-  { label: "Q3", text: "Ohm's Law relates voltage to…", correct: "C", choices: ["A", "B", "C", "D"] },
-  { label: "Q4", text: "Mitosis produces how many cells?", correct: "B", choices: ["A", "B", "C", "D"] },
+  { label: "Q1", text: "Which theorem proves √2 is irrational?", correct: "B" },
+  { label: "Q2", text: "Define a recursive function.", correct: "A" },
+  { label: "Q3", text: "Ohm's Law relates voltage to…", correct: "C" },
+  { label: "Q4", text: "Mitosis produces how many cells?", correct: "B" },
 ];
 
 const STUDENT_ANSWERS = ["B", "A", "C", "A"]; // Q4 wrong on purpose — makes it feel real
@@ -24,9 +25,9 @@ function GradingDemo() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Auto-start after mount delay so it catches the eye mid-scroll
-    const startDelay = setTimeout(() => startGrading(), 800);
+    const startDelay = setTimeout(() => startGrading(), 900);
     return () => clearTimeout(startDelay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function startGrading() {
@@ -58,48 +59,48 @@ function GradingDemo() {
 
   return (
     <div
-      className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-slate-200/60"
-      style={{ background: "linear-gradient(145deg, #0F172A 0%, #1E2A4A 100%)" }}
+      className="relative w-full rounded-2xl overflow-hidden border border-black/5"
+      style={{
+        background: "#0B1220",
+        boxShadow: "0 24px 60px -20px rgba(11,18,32,0.45), 0 4px 16px rgba(11,18,32,0.12)",
+      }}
       aria-label="Live grading simulation"
     >
-      {/* Window chrome */}
-      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-slate-700/50">
-        <span className="w-3 h-3 rounded-full bg-rose-500/80" />
-        <span className="w-3 h-3 rounded-full bg-amber-400/80" />
-        <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-        <span className="ml-3 text-xs text-slate-400 font-mono tracking-wide">Facultify — Auto Grade</span>
+      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/[0.06]">
+        <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+        <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+        <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+        <span className="ml-3 text-[11px] text-white/40 font-medium tracking-wide">
+          Facultify · Auto Grade
+        </span>
       </div>
 
       <div className="p-5 space-y-3">
-        {/* Header row */}
         <div className="flex items-center justify-between mb-1">
           <div>
-            <p className="text-[11px] text-slate-400 uppercase tracking-widest font-semibold">Test · Introduction to Science</p>
+            <p className="text-[10.5px] text-white/35 uppercase tracking-widest font-semibold">
+              Test · Introduction to Science
+            </p>
             <p className="text-white font-semibold text-sm mt-0.5">Priya Mehta — Submission #47</p>
           </div>
           <div className="text-right">
             <p
-              className="text-2xl font-black tabular-nums transition-all duration-300"
-              style={{ color: phase === "done" ? (pct >= 75 ? "#4ADE80" : "#FB923C") : "#94A3B8" }}
+              className="text-2xl font-semibold tabular-nums transition-colors duration-300"
+              style={{ color: phase === "done" ? (pct >= 75 ? "#4ADE80" : "#FB923C") : "rgba(255,255,255,0.35)" }}
             >
               {score}%
             </p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Score</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-widest">Score</p>
           </div>
         </div>
 
-        {/* Score bar */}
-        <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
+        <div className="w-full h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${pct}%`,
-              background: pct >= 75 ? "#4ADE80" : "#FB923C",
-            }}
+            style={{ width: `${pct}%`, background: pct >= 75 ? "#4ADE80" : "#FB923C" }}
           />
         </div>
 
-        {/* Question rows */}
         <div className="space-y-2 pt-1">
           {QUESTIONS.map((q, i) => {
             const isGraded = i < gradedCount;
@@ -111,9 +112,9 @@ function GradingDemo() {
                 style={{
                   background: isGraded
                     ? isCorrect
-                      ? "rgba(74,222,128,0.08)"
-                      : "rgba(251,146,60,0.08)"
-                    : "rgba(255,255,255,0.03)",
+                      ? "rgba(74,222,128,0.07)"
+                      : "rgba(251,146,60,0.07)"
+                    : "rgba(255,255,255,0.02)",
                   borderLeft: isGraded
                     ? `2px solid ${isCorrect ? "#4ADE80" : "#FB923C"}`
                     : "2px solid transparent",
@@ -124,15 +125,15 @@ function GradingDemo() {
                   style={{
                     background: isGraded
                       ? isCorrect
-                        ? "rgba(74,222,128,0.2)"
-                        : "rgba(251,146,60,0.2)"
-                      : "rgba(255,255,255,0.06)",
-                    color: isGraded ? (isCorrect ? "#4ADE80" : "#FB923C") : "#64748B",
+                        ? "rgba(74,222,128,0.16)"
+                        : "rgba(251,146,60,0.16)"
+                      : "rgba(255,255,255,0.05)",
+                    color: isGraded ? (isCorrect ? "#4ADE80" : "#FB923C") : "rgba(255,255,255,0.35)",
                   }}
                 >
                   {q.label}
                 </span>
-                <p className="text-[12px] text-slate-300 leading-snug flex-1 truncate">{q.text}</p>
+                <p className="text-[12px] text-white/60 leading-snug flex-1 truncate">{q.text}</p>
                 <span className="shrink-0 text-[11px] font-bold">
                   {isGraded ? (
                     isCorrect ? (
@@ -141,7 +142,7 @@ function GradingDemo() {
                       <span style={{ color: "#FB923C" }}>+0</span>
                     )
                   ) : (
-                    <span className="text-slate-600">···</span>
+                    <span className="text-white/20">···</span>
                   )}
                 </span>
               </div>
@@ -149,15 +150,16 @@ function GradingDemo() {
           })}
         </div>
 
-        {/* Bottom bar */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
+        <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
           <div className="flex gap-4">
             <div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Graded</p>
-              <p className="text-sm font-semibold text-white tabular-nums">{gradedCount}/{QUESTIONS.length}</p>
+              <p className="text-[10px] text-white/30 uppercase tracking-wider">Graded</p>
+              <p className="text-sm font-semibold text-white tabular-nums">
+                {gradedCount}/{QUESTIONS.length}
+              </p>
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Time</p>
+              <p className="text-[10px] text-white/30 uppercase tracking-wider">Time</p>
               <p className="text-sm font-semibold text-white">0.3s</p>
             </div>
           </div>
@@ -165,7 +167,7 @@ function GradingDemo() {
           {phase === "done" && (
             <button
               onClick={replay}
-              className="text-[11px] text-slate-400 hover:text-white transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-white/5"
+              className="text-[11px] text-white/40 hover:text-white transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-white/5"
               aria-label="Replay grading animation"
             >
               <Play className="w-3 h-3" />
@@ -173,17 +175,10 @@ function GradingDemo() {
             </button>
           )}
           {phase === "grading" && (
-            <span className="text-[11px] text-blue-400 animate-pulse">Grading…</span>
+            <span className="text-[11px] text-brand-400 animate-pulse">Grading…</span>
           )}
         </div>
       </div>
-
-      {/* Ambient glow beneath the card — purely decorative */}
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-16 blur-2xl opacity-40 pointer-events-none rounded-full"
-        style={{ background: "linear-gradient(90deg, #3B6FFF, #7C3AED)" }}
-      />
     </div>
   );
 }
@@ -195,145 +190,101 @@ function GradingDemo() {
 export default function Hero() {
   return (
     <section
-      className="relative min-h-screen flex flex-col justify-center overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #F8FAFF 0%, #EEF2FF 55%, #F5F3FF 100%)" }}
+      className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-white bg-grid-faint"
       aria-label="Hero"
     >
-      {/* Decorative blobs — atmosphere, not decoration */}
+      {/* Single soft glow — atmosphere, not decoration */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full blur-3xl opacity-[0.18]"
-          style={{ background: "radial-gradient(circle, #3B6FFF 0%, transparent 70%)" }}
+          className="absolute -top-40 right-[-10%] w-[640px] h-[640px] rounded-full blur-[110px] opacity-[0.35]"
+          style={{ background: "radial-gradient(circle, #DEE6FF 0%, transparent 70%)" }}
         />
-        <div
-          className="absolute -bottom-48 -right-24 w-[500px] h-[500px] rounded-full blur-3xl opacity-[0.15]"
-          style={{ background: "radial-gradient(circle, #7C3AED 0%, transparent 70%)" }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full blur-3xl opacity-[0.06]"
-          style={{ background: "radial-gradient(ellipse, #3B6FFF 0%, transparent 60%)" }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white" />
       </div>
 
-      {/* Grid container */}
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-12 py-20 lg:py-28">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-12 py-24 lg:py-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
-
           {/* ── Left: copy stack ── */}
-          <div className="flex flex-col gap-8 animate-fade-in">
-
+          <motion.div
+            className="flex flex-col gap-7"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          >
             {/* Eyebrow */}
-            <div className="inline-flex items-center gap-2.5 self-start">
-              <span
-                className="w-2 h-2 rounded-full animate-pulse"
-                style={{ background: "linear-gradient(135deg, #3B6FFF, #7C3AED)" }}
-                aria-hidden="true"
-              />
-              <span
-                className="text-xs font-bold uppercase tracking-[0.16em]"
-                style={{ color: "#3B6FFF" }}
-              >
-                AI-Powered Assessment
+            <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-3.5 py-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+              <span className="text-xs font-semibold text-ink-soft tracking-wide">
+                Built for schools &amp; coaching institutes
               </span>
             </div>
 
             {/* Headline */}
-            <div>
-              <h1
-                className="text-5xl sm:text-6xl xl:text-7xl font-black leading-[1.05] tracking-[-0.03em]"
-                style={{ color: "#0F172A" }}
-              >
-                Assess{" "}
-                <span
-                  className="inline-block bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: "linear-gradient(135deg, #3B6FFF 0%, #7C3AED 100%)",
-                    WebkitBackgroundClip: "text",
-                  }}
-                >
-                  Smarter,
-                </span>
-                <br />
-                Teach Better.
-              </h1>
-            </div>
+            <h1 className="text-[2.75rem] sm:text-6xl xl:text-[4.5rem] font-semibold leading-[1.08] tracking-[-0.02em] text-ink">
+              Assess{" "}
+              <span className="font-serif italic font-normal text-brand-600">smarter,</span>
+              <br />
+              teach better.
+            </h1>
 
             {/* Subheadline */}
-            <p
-              className="text-lg sm:text-xl leading-relaxed max-w-[480px] font-normal"
-              style={{ color: "#475569" }}
-            >
+            <p className="text-lg sm:text-xl leading-relaxed max-w-[480px] text-ink-muted">
               Facultify gives institutions an end-to-end assessment engine — generate
               AI-authored tests in seconds, grade thousands of submissions instantly,
               and surface the learning gaps your faculty actually need to act on.
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4 pt-1">
               <Link
                 href="/auth/signup"
-                className="inline-flex items-center gap-2.5 rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                style={{
-                  background: "linear-gradient(135deg, #3B6FFF 0%, #5B4DFF 100%)",
-                  boxShadow: "0 4px 20px rgba(59,111,255,0.35)",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(59,111,255,0.45)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(59,111,255,0.35)";
-                }}
+                className="group inline-flex items-center gap-2.5 rounded-xl bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-[0_10px_30px_-10px_rgba(46,70,173,0.55)] transition-all duration-200 hover:bg-brand-700 hover:shadow-[0_14px_36px_-10px_rgba(46,70,173,0.6)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
               >
                 Start Free Trial
-                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
               </Link>
             </div>
 
             {/* Trust note */}
-            <p className="text-xs text-slate-400 font-medium -mt-2">
-              No credit card required &middot; Setup in under 5 minutes
+            <p className="text-xs text-ink-faint font-medium">
+              No credit card required · Setup in under 5 minutes
             </p>
-          </div>
+          </motion.div>
 
           {/* ── Right: animated grading demo ── */}
-          <div
-            className="relative animate-fade-in lg:pl-4"
-            style={{ animationDelay: "150ms", animationFillMode: "both" }}
+          <motion.div
+            className="relative lg:pl-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Floating badge — social proof anchored to the demo */}
+            {/* Stat badge — anchored to the demo, single accent, no rainbow */}
             <div
-              className="absolute -top-4 -left-4 z-20 flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg border"
-              style={{ background: "#fff", borderColor: "#E2E8F0" }}
+              className="absolute -top-4 -left-4 z-20 flex items-center gap-2.5 rounded-xl bg-white px-3.5 py-2.5 border border-slate-200 shadow-[0_8px_24px_-8px_rgba(11,18,32,0.18)]"
               aria-label="Graded in 0.3 seconds"
             >
-              <span className="text-lg" aria-hidden="true">&#9889;</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
               <div>
-                <p className="text-xs font-bold text-slate-800 leading-none">Graded in 0.3s</p>
-                <p className="text-[10px] text-slate-400 leading-none mt-0.5">vs. 45 min manually</p>
+                <p className="text-xs font-semibold text-ink leading-none">Graded in 0.3s</p>
+                <p className="text-[10px] text-ink-faint leading-none mt-1">vs. 45 min manually</p>
               </div>
             </div>
 
-            {/* Floating accuracy badge */}
             <div
-              className="absolute -bottom-4 -right-2 z-20 flex items-center gap-2 rounded-xl px-3 py-2 shadow-lg border"
-              style={{ background: "#fff", borderColor: "#E2E8F0" }}
+              className="absolute -bottom-4 -right-2 z-20 flex items-center gap-2.5 rounded-xl bg-white px-3.5 py-2.5 border border-slate-200 shadow-[0_8px_24px_-8px_rgba(11,18,32,0.18)]"
               aria-label="99.8% grading accuracy"
             >
-              <span
-                className="text-lg font-black tabular-nums"
-                style={{ color: "#4ADE80" }}
-                aria-hidden="true"
-              >
+              <span className="text-lg font-semibold tabular-nums text-brand-600" aria-hidden="true">
                 99.8%
               </span>
               <div>
-                <p className="text-xs font-bold text-slate-800 leading-none">Accuracy</p>
-                <p className="text-[10px] text-slate-400 leading-none mt-0.5">audited by faculty</p>
+                <p className="text-xs font-semibold text-ink leading-none">Accuracy</p>
+                <p className="text-[10px] text-ink-faint leading-none mt-1">audited by faculty</p>
               </div>
             </div>
 
             <GradingDemo />
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
